@@ -9,14 +9,21 @@ CS39006 DBMS Lab project: high-QPS LOB, TimescaleDB, Apache AGE, Qiskit arbitrag
 
 ### One-time setup
 
+Setting up the development environment requires installing linting and formatting tools. We use `ruff` for code formatting and standard checks, and `pre-commit` to automatically run these checks on every commit.
+
 ```bash
+# 1. Create and activate a virtual environment
 python3.12 -m venv .venv
 source .venv/bin/activate   # or .venv\Scripts\activate on Windows
+
+# 2. Install development tools (ruff and pre-commit)
 pip install -r requirements-dev.txt
+
+# 3. Initialize git hooks to automatically check your code
 pre-commit install
 ```
 
-Then each commit will run the hooks. To run manually:
+Then each commit will run the hooks. To run manually across all files:
 
 ```bash
 pre-commit run --all-files
