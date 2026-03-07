@@ -1,4 +1,5 @@
 # Granular Task List
+
 ## Hybrid Trading Database System – AI Agent Execution Plan
 
 > Format: `[MODULE] [OWNER] TASK — Acceptance Criteria`
@@ -9,12 +10,12 @@
 
 - [x] **[INFRA]** Create GitHub repo with `main` and `dev` branches; add `.gitignore` for Python, Node, Java — *Repo exists, CI pre-commit hook runs linting*
 - [x] **[INFRA]** Write `docker-compose.yml` with services: `zookeeper`, `kafka`, `postgres` (TimescaleDB+AGE image), `redis`, `prometheus`, `grafana` — *`docker compose up` brings all services healthy*
-- [ ] **[INFRA]** Write `init.sql` that: loads TimescaleDB extension, loads AGE extension, creates all tables from DATABASE_SCHEMA.md — *All tables exist after container start*
-- [ ] **[INFRA]** Create Kafka topic `raw_orders` with 4 partitions, replication factor 1 — *`kafka-topics.sh --list` shows `raw_orders`*
-- [ ] **[INFRA]** Set up IBM Qiskit local environment: `pip install qiskit qiskit-aer`, run sample Bell circuit — *Sample circuit executes without error*
-- [ ] **[INFRA]** Configure Prometheus `prometheus.yml` to scrape FastAPI `/metrics`, postgres-exporter, redis-exporter, node-exporter — *Prometheus targets page shows all UP*
-- [ ] **[INFRA]** Import Grafana provisioning YAML for datasources (TimescaleDB + Prometheus) — *Both datasources appear in Grafana UI*
-- [ ] **[INFRA]** Write `requirements.txt` covering: `fastapi`, `uvicorn`, `psycopg[binary]`, `confluent-kafka`, `sqlglot`, `redis`, `qiskit`, `qiskit-aer`, `sortedcontainers`, `prometheus-client`, `faker`, `numpy`, `pytest` — *`pip install -r requirements.txt` succeeds cleanly*
+- [x] **[INFRA]** Write `init.sql` that: loads TimescaleDB extension, loads AGE extension, creates all tables from DATABASE_SCHEMA.md — *All tables exist after container start*
+- [x] **[INFRA]** Create Kafka topic `raw_orders` with 4 partitions, replication factor 1 — *`kafka-topics.sh --list` shows `raw_orders`*
+- [x] **[INFRA]** Set up IBM Qiskit local environment: `pip install qiskit qiskit-aer`, run sample Bell circuit — *Sample circuit executes without error*
+- [x] **[INFRA]** Configure Prometheus `prometheus.yml` to scrape FastAPI `/metrics`, postgres-exporter, redis-exporter, node-exporter — *Prometheus targets page shows all UP*
+- [x] **[INFRA]** Import Grafana provisioning YAML for datasources (TimescaleDB + Prometheus) — *Both datasources appear in Grafana UI*
+- [x] **[INFRA]** Write `requirements.txt` covering: `fastapi`, `uvicorn`, `psycopg[binary]`, `confluent-kafka`, `sqlglot`, `redis`, `qiskit`, `qiskit-aer`, `sortedcontainers`, `prometheus-client`, `faker`, `numpy`, `pytest` — *`pip install -r requirements.txt` succeeds cleanly*
 
 ---
 
@@ -80,6 +81,7 @@
 - [ ] **[M5-M5]** Log all blocked requests to `security_events` table — *After test payloads, `SELECT count(*) FROM security_events WHERE event_type='SQL_INJECTION'` matches blocked count*
 
 ### Integration Milestone
+
 - [ ] **[ALL]** Intermediate demo: show LOB engine accepting orders via REST, trades persisting to TimescaleDB, OHLCV aggregates populating, and depth WebSocket streaming — *All visible in terminal/Grafana during live demo*
 
 ---
