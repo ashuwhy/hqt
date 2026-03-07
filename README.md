@@ -26,9 +26,13 @@ pre-commit run --all-files
 
 - [PRD](docs/PRD.md) · [Architecture](docs/ARCHITECTURE.md) · [Database schema](docs/DATABASE_SCHEMA.md) · [API spec](docs/API_SPEC.md) · [Module specs](docs/MODULE_SPECS.md) · [Task list](docs/TASK_LIST.md)
 
-## Quick start (when implemented)
+## Quick start
 
 ```bash
 docker compose up -d
-# Proxy: http://localhost:8000  ·  Grafana: http://localhost:3000
+# First run builds the Postgres image (TimescaleDB + AGE on Debian); allow a few minutes.
+# When healthy: Postgres 5432, Kafka 9092, Redis 6379, Prometheus 9090, Grafana 3000.
+# Proxy (when implemented): http://localhost:8000  ·  Grafana: http://localhost:3000
 ```
+
+If you see **Docker I/O errors** during build (`input/output error` when committing or pulling), try: restart Docker Desktop, free disk space, then `docker builder prune -f` and `docker compose build --no-cache` again.

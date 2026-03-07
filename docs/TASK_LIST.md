@@ -8,7 +8,7 @@
 ## PHASE 0 – Repository & Infrastructure (Week 1: Mar 8–14)
 
 - [x] **[INFRA]** Create GitHub repo with `main` and `dev` branches; add `.gitignore` for Python, Node, Java — *Repo exists, CI pre-commit hook runs linting*
-- [ ] **[INFRA]** Write `docker-compose.yml` with services: `zookeeper`, `kafka`, `postgres` (TimescaleDB+AGE image), `redis`, `prometheus`, `grafana` — *`docker compose up` brings all services healthy*
+- [x] **[INFRA]** Write `docker-compose.yml` with services: `zookeeper`, `kafka`, `postgres` (TimescaleDB+AGE image), `redis`, `prometheus`, `grafana` — *`docker compose up` brings all services healthy*
 - [ ] **[INFRA]** Write `init.sql` that: loads TimescaleDB extension, loads AGE extension, creates all tables from DATABASE_SCHEMA.md — *All tables exist after container start*
 - [ ] **[INFRA]** Create Kafka topic `raw_orders` with 4 partitions, replication factor 1 — *`kafka-topics.sh --list` shows `raw_orders`*
 - [ ] **[INFRA]** Set up IBM Qiskit local environment: `pip install qiskit qiskit-aer`, run sample Bell circuit — *Sample circuit executes without error*

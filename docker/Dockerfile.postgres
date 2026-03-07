@@ -1,0 +1,30 @@
+# PostgreSQL 16 + TimescaleDB + Apache AGE (Debian base for correct PG16 dev packages)
+FROM postgres:16-bookworm
+
+USER root
+
+# Install deps and add TimescaleDB repo (see https://packagecloud.io/timescale/timescaledb/install)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    flex \
+    bison \
+    postgresql-server-dev-16 \
+    ca-certificates \
+    curl \
+    gnupg \
+    apt-transport-https \
+    && curl -fsSL https://packagecloud.io/timescale/timescaledb/gpgkey | gpg --dearmor -o /etc/apt/keyrings/timescale_timescaledb.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/timescale_timescaledb.gpg] https://packagecloud.io/timescale/timescaledb/debian/ bookworm main" > /etc/apt/sources.list.d/timescaledb.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends timescaledb-2-postgresql-16 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Build and install Apache AGE for PG16
+RUN git clone --depth 1 -b PG16 https://github.com/apache/age.git /tmp/age \
+    && cd /tmp/age \
+    && make PG_CONFIG=/usr/lib/postgresql/16/bin/pg_config install \
+    && rm -rf /tmp/age
+
+USER postgres
+# shared_preload_libraries set at runtime in docker-compose (timescaledb,age)
