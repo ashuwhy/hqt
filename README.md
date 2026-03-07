@@ -4,7 +4,7 @@ CS39006 DBMS Lab project: high-QPS LOB, TimescaleDB, Apache AGE, Qiskit arbitrag
 
 ## Repo setup
 
-- **Branches:** `main` (default), `dev` (feature work).
+- **Branches:** `dev` (default), `main` (weekly updates).
 - **Linting:** Pre-commit runs Ruff (Python) and common checks before each commit.
 
 ### One-time setup
