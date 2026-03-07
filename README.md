@@ -1,4 +1,4 @@
-# hqt – Hybrid Trading Database System
+# hqt – hybrid quantum trading database system
 
 CS39006 DBMS Lab project: high-QPS LOB, TimescaleDB, Apache AGE, Qiskit arbitrage, security & observability.
 
