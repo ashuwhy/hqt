@@ -114,6 +114,118 @@ services:
       timeout: 5s
       retries: 5
 
+  kafka-setup:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: hqt-kafka-setup
+    depends_on:
+      kafka:
+        condition: service_healthy
+    volumes:
+      - ./scripts/create_kafka_topics.sh:/create_kafka_topics.sh:ro
+    entrypoint: [ "bash", "/create_kafka_topics.sh" ]
+
+  lob-engine:
+    build:
+      context: .
+      dockerfile: module1_lob/Dockerfile
+    container_name: hqt-lob
+    hostname: lob-engine
+    ports:
+      - "8001:8001"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8001/lob/health || exit 1" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  data-ingestor:
+    build:
+      context: .
+      dockerfile: module2_timescale/Dockerfile
+    container_name: hqt-data-ingestor
+    hostname: data-ingestor
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+  quantum-engine:
+    build:
+      context: .
+      dockerfile: module4_quantum/Dockerfile
+    container_name: hqt-quantum
+    hostname: quantum-engine
+    ports:
+      - "8004:8004"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8004/health || exit 1" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  fastapi-proxy:
+    build:
+      context: .
+      dockerfile: module5_security/Dockerfile
+    container_name: hqt-fastapi
+    hostname: fastapi-proxy
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      lob-engine:
+        condition: service_healthy
+      quantum-engine:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8000/health || exit 1" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: hqt-postgres-exporter
+    hostname: postgres-exporter
+    ports:
+      - "9187:9187"
+    environment:
+      DATA_SOURCE_NAME: postgresql://hqt:hqt_secret@postgres:5432/hqt
+
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: hqt-redis-exporter
+    hostname: redis-exporter
+    ports:
+      - "9121:9121"
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: hqt-node-exporter
+    hostname: node-exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+
 volumes:
   postgres_data:
   grafana_data:

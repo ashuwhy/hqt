@@ -50,10 +50,9 @@ CREATE TABLE IF NOT EXISTS trades (
     sell_order_id UUID            NOT NULL REFERENCES orders(order_id),
     price         NUMERIC(18, 8)  NOT NULL,
     quantity      NUMERIC(18, 8)  NOT NULL,
-    PRIMARY KEY (trade_id, ts)
+    PRIMARY KEY (trade_id)
 );
 
-SELECT create_hypertable('trades', 'ts', if_not_exists => TRUE);
 CREATE INDEX IF NOT EXISTS idx_trades_symbol_ts ON trades (symbol, ts DESC);
 
 -- 3. Graph Database (Apache AGE)
@@ -76,10 +75,8 @@ CREATE TABLE IF NOT EXISTS arbitrage_signals (
     classical_ms        NUMERIC(10, 3),
     quantum_ms          NUMERIC(10, 3),
     graph_size_n        INT             NOT NULL,
-    PRIMARY KEY (signal_id, ts)
+    PRIMARY KEY (signal_id)
 );
-
-SELECT create_hypertable('arbitrage_signals', 'ts', if_not_exists => TRUE);
 
 -- 5. Security & Observability Tables
 CREATE TABLE IF NOT EXISTS security_events (
@@ -90,10 +87,9 @@ CREATE TABLE IF NOT EXISTS security_events (
     raw_payload  TEXT,
     blocked      BOOLEAN         NOT NULL DEFAULT TRUE,
     endpoint     VARCHAR(200),
-    PRIMARY KEY (event_id, ts)
+    PRIMARY KEY (event_id)
 );
 
-SELECT create_hypertable('security_events', 'ts', if_not_exists => TRUE);
 CREATE INDEX IF NOT EXISTS idx_security_ip_ts ON security_events (client_ip, ts DESC);
 
 CREATE TABLE IF NOT EXISTS benchmark_runs (
@@ -113,31 +109,62 @@ CREATE TABLE IF NOT EXISTS benchmark_runs (
 );
 
 -- 6. Continuous Aggregates
+-- ohlcv_1m
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM timescaledb_information.continuous_aggregates WHERE view_name = 'ohlcv_1m') THEN
         CREATE MATERIALIZED VIEW ohlcv_1m
         WITH (timescaledb.continuous) AS
-        SELECT
-            time_bucket('1 minute', ts)   AS bucket,
-            symbol,
-            FIRST(price, ts)              AS open,
-            MAX(price)                    AS high,
-            MIN(price)                    AS low,
-            LAST(price, ts)               AS close,
-            SUM(volume)                   AS volume
-        FROM raw_ticks
-        GROUP BY bucket, symbol
-        WITH NO DATA;
+        SELECT time_bucket('1 minute', ts) AS bucket, symbol, FIRST(price, ts) AS open, MAX(price) AS high, MIN(price) AS low, LAST(price, ts) AS close, SUM(volume) AS volume
+        FROM raw_ticks GROUP BY bucket, symbol WITH NO DATA;
+    END IF;
+END $$;
+
+-- ohlcv_5m
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM timescaledb_information.continuous_aggregates WHERE view_name = 'ohlcv_5m') THEN
+        CREATE MATERIALIZED VIEW ohlcv_5m
+        WITH (timescaledb.continuous) AS
+        SELECT time_bucket('5 minutes', ts) AS bucket, symbol, FIRST(price, ts) AS open, MAX(price) AS high, MIN(price) AS low, LAST(price, ts) AS close, SUM(volume) AS volume
+        FROM raw_ticks GROUP BY bucket, symbol WITH NO DATA;
+    END IF;
+END $$;
+
+-- ohlcv_15m
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM timescaledb_information.continuous_aggregates WHERE view_name = 'ohlcv_15m') THEN
+        CREATE MATERIALIZED VIEW ohlcv_15m
+        WITH (timescaledb.continuous) AS
+        SELECT time_bucket('15 minutes', ts) AS bucket, symbol, FIRST(price, ts) AS open, MAX(price) AS high, MIN(price) AS low, LAST(price, ts) AS close, SUM(volume) AS volume
+        FROM raw_ticks GROUP BY bucket, symbol WITH NO DATA;
+    END IF;
+END $$;
+
+-- ohlcv_1h
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM timescaledb_information.continuous_aggregates WHERE view_name = 'ohlcv_1h') THEN
+        CREATE MATERIALIZED VIEW ohlcv_1h
+        WITH (timescaledb.continuous) AS
+        SELECT time_bucket('1 hour', ts) AS bucket, symbol, FIRST(price, ts) AS open, MAX(price) AS high, MIN(price) AS low, LAST(price, ts) AS close, SUM(volume) AS volume
+        FROM raw_ticks GROUP BY bucket, symbol WITH NO DATA;
     END IF;
 END $$;
 
 -- 7. Policies
 SELECT add_continuous_aggregate_policy('ohlcv_1m',
-    start_offset => INTERVAL '10 minutes',
-    end_offset   => INTERVAL '1 minute',
-    schedule_interval => INTERVAL '1 minute',
-    if_not_exists => TRUE);
+    start_offset => INTERVAL '10 minutes', end_offset => INTERVAL '1 minute', schedule_interval => INTERVAL '1 minute', if_not_exists => TRUE);
+
+SELECT add_continuous_aggregate_policy('ohlcv_5m',
+    start_offset => INTERVAL '50 minutes', end_offset => INTERVAL '5 minutes', schedule_interval => INTERVAL '5 minutes', if_not_exists => TRUE);
+
+SELECT add_continuous_aggregate_policy('ohlcv_15m',
+    start_offset => INTERVAL '150 minutes', end_offset => INTERVAL '15 minutes', schedule_interval => INTERVAL '15 minutes', if_not_exists => TRUE);
+
+SELECT add_continuous_aggregate_policy('ohlcv_1h',
+    start_offset => INTERVAL '10 hours', end_offset => INTERVAL '1 hour', schedule_interval => INTERVAL '1 hour', if_not_exists => TRUE);
 
 -- Compression policy for raw_ticks
 DO $$
