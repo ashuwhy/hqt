@@ -1,4 +1,4 @@
-http://0.0.0.0:8001/lob/order POST {"symbol":"BTC/USD","side":"B","order_type":"LIMIT","price":100000.0,"quantity":1.0}
-http://0.0.0.0:8001/lob/order POST {"symbol":"BTC/USD","side":"S","order_type":"LIMIT","price":99999.0,"quantity":1.0}
-http://0.0.0.0:8001/lob/order POST {"symbol":"ETH/USD","side":"B","order_type":"LIMIT","price":4000.0,"quantity":10.0}
-http://0.0.0.0:8001/lob/order POST {"symbol":"ETH/USD","side":"S","order_type":"LIMIT","price":3999.0,"quantity":10.0}
+http://localhost:8001/lob/order POST {"symbol": "BTC/USD", "side": "B", "price": 50000.0, "quantity": 1.0, "order_type": "LIMIT"}
+http://localhost:8001/lob/order POST {"symbol": "BTC/USD", "side": "A", "price": 50001.0, "quantity": 1.0, "order_type": "LIMIT"}
+http://localhost:8001/lob/order POST {"symbol": "ETH/USD", "side": "B", "price": 3000.0, "quantity": 10.0, "order_type": "LIMIT"}
+http://localhost:8001/lob/order POST {"symbol": "ETH/USD", "side": "A", "price": 3001.0, "quantity": 10.0, "order_type": "LIMIT"}

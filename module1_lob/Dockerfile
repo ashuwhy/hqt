@@ -15,7 +15,7 @@ RUN cmake -B build -S . -DCMAKE_BUILD_TYPE=Release \
 
 FROM debian:bookworm-slim AS runtime
 WORKDIR /app
-RUN apt-get update && apt-get install -y librdkafka1 curl \
+RUN apt-get update && apt-get install -y librdkafka1 librdkafka++1 curl siege \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/module1_lob/build/lob_server /usr/local/bin/lob_server
 EXPOSE 8001
