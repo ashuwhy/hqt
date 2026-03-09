@@ -22,6 +22,7 @@ FetchContent_Declare(prometheus-cpp
   GIT_TAG v1.1.0
 )
 set(ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+set(ENABLE_PUSH OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(prometheus-cpp)
 
 add_subdirectory(engine/cpp engine)
