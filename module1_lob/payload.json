@@ -1,0 +1,7 @@
+{
+    "symbol": "BTC/USD",
+    "side": "B",
+    "order_type": "LIMIT",
+    "price": 100000.0,
+    "quantity": 1.0
+}

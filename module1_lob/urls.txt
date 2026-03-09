@@ -1,5 +1,4 @@
-#urls.txt
-http://localhost:8001/lob/order POST {"symbol": "BTC/USD", "side": "B", "order_type": "LIMIT", "price": 100000.0, "quantity": 1.0}
-http://localhost:8001/lob/order POST {"symbol": "BTC/USD", "side": "S", "order_type": "LIMIT", "price": 99999.0, "quantity": 1.0}
-http://localhost:8001/lob/order POST {"symbol": "ETH/USD", "side": "B", "order_type": "LIMIT", "price": 4000.0, "quantity": 10.0}
-http://localhost:8001/lob/order POST {"symbol": "ETH/USD", "side": "S", "order_type": "LIMIT", "price": 3999.0, "quantity": 10.0}
+http://127.0.0.1:8001/lob/order POST {"symbol":"BTC/USD","side":"B","order_type":"LIMIT","price":100000.0,"quantity":1.0}
+http://127.0.0.1:8001/lob/order POST {"symbol":"BTC/USD","side":"S","order_type":"LIMIT","price":99999.0,"quantity":1.0}
+http://127.0.0.1:8001/lob/order POST {"symbol":"ETH/USD","side":"B","order_type":"LIMIT","price":4000.0,"quantity":10.0}
+http://127.0.0.1:8001/lob/order POST {"symbol":"ETH/USD","side":"S","order_type":"LIMIT","price":3999.0,"quantity":10.0}
