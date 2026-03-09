@@ -1,0 +1,12 @@
+**/.git
+**/__pycache__
+**/*.pyc
+.venv
+**/*.egg-info/
+module1_lob/engine/build/
+module1_lob/engine/bench_out/
+module1_lob/engine/bench_out_ns/
+module1_lob/engine/recon/
+module1_lob/engine/analytics/
+module1_lob/engine/CMakeCache.txt
+module1_lob/engine/CMakeFiles

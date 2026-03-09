@@ -130,6 +130,8 @@ services:
       dockerfile: module1_lob/Dockerfile
     container_name: hqt-lob
     hostname: lob-engine
+    env_file:
+      - .env
     ports:
       - "8001:8001"
     depends_on:
@@ -149,6 +151,8 @@ services:
       dockerfile: module2_timescale/Dockerfile
     container_name: hqt-data-ingestor
     hostname: data-ingestor
+    env_file:
+      - .env
     depends_on:
       kafka:
         condition: service_healthy
@@ -161,6 +165,8 @@ services:
       dockerfile: module4_quantum/Dockerfile
     container_name: hqt-quantum
     hostname: quantum-engine
+    env_file:
+      - .env
     ports:
       - "8004:8004"
     depends_on:
@@ -178,6 +184,8 @@ services:
       dockerfile: module5_security/Dockerfile
     container_name: hqt-fastapi
     hostname: fastapi-proxy
+    env_file:
+      - .env
     ports:
       - "8000:8000"
     depends_on:
@@ -188,7 +196,7 @@ services:
       lob-engine:
         condition: service_healthy
       quantum-engine:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: [ "CMD-SHELL", "curl -f http://localhost:8000/health || exit 1" ]
       interval: 5s
@@ -202,7 +210,7 @@ services:
     ports:
       - "9187:9187"
     environment:
-      DATA_SOURCE_NAME: postgresql://hqt:hqt_secret@postgres:5432/hqt
+      DATA_SOURCE_NAME: postgresql://hqt:hqt_secret@postgres:5432/hqt?sslmode=disable
 
   redis-exporter:
     image: oliver006/redis_exporter:latest
@@ -210,6 +218,8 @@ services:
     hostname: redis-exporter
     ports:
       - "9121:9121"
+    environment:
+      REDIS_ADDR: redis://redis:6379
 
   node-exporter:
     image: prom/node-exporter:latest

@@ -22,6 +22,7 @@ from module1_lob.ring_buffer import RingBuffer
 app = FastAPI(title="HQT LOB Engine")
 
 # --- Globals ---
+_event_loop = None
 books: Dict[str, olob.Book] = {}
 ring_buffer = RingBuffer(2**20)
 
@@ -75,9 +76,9 @@ def broadcast_depth(symbol: str):
             except Exception:
                 pass
                 
-        loop = asyncio.get_event_loop()
         for ws in active_websockets[symbol]:
-            asyncio.run_coroutine_threadsafe(send(ws, msg), loop)
+            if _event_loop is not None:
+                asyncio.run_coroutine_threadsafe(send(ws, msg), _event_loop)
 
 # --- Threads ---
 
@@ -110,7 +111,7 @@ def matching_thread():
         if seq <= pub_seq:
             batch = []
             while seq <= pub_seq:
-                event = ring_buffer.get(seq)
+                event = ring_buffer[seq]
                 batch.append(event)
                 seq += 1
             
@@ -216,6 +217,8 @@ def persistence_thread():
 # --- App Lifecycle ---
 @app.on_event("startup")
 def startup():
+    global _event_loop
+    _event_loop = asyncio.get_running_loop()
     threading.Thread(target=inbound_thread, daemon=True).start()
     threading.Thread(target=matching_thread, daemon=True).start()
     threading.Thread(target=persistence_thread, daemon=True).start()
