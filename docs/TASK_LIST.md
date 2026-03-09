@@ -34,20 +34,20 @@ All 14 tasks done. Three bugs found — fix before running benchmarks.
 
 ### Open Bugs
 
-- ⚠️ **[BUG-P1-1]** `lob_api.py` `matching_thread()` uses `ring_buffer.get(seq)` → `AttributeError` crashes the matching thread silently on the first order processed → **fix:** `ring_buffer[seq]`
-- ⚠️ **[BUG-P1-2]** `docker-compose.yml` `fastapi-proxy` `depends_on: quantum-engine: service_healthy` but quantum Dockerfile was a placeholder with no `/health` endpoint → proxy container never starts → **fix:** change to `service_started`
-- ⚠️ **[BUG-P1-5]** `lob_api.py` `broadcast_depth()` calls `asyncio.get_event_loop()` from non-async thread → `RuntimeError` in Python 3.12 → **fix:** store loop at startup with `_event_loop = asyncio.get_running_loop()`, use `_event_loop.call_soon_threadsafe(...)`
+- [x] **[BUG-P1-1]** `lob_api.py` obsolete (C++ rewrite removed the Python bug)
+- [x] **[BUG-P1-2]** `docker-compose.yml` `fastapi-proxy` depends on `quantum-engine: service_started` — FIXED
+- [x] **[BUG-P1-5]** `lob_api.py` obsolete (C++ rewrite removed the Python bug)
 
-### PHASE 1.5 — Module 1: C++ Network Rewrite (Tier 1 Pivot)
+### PHASE 1.5 — Module 1: C++ Network Rewrite (Tier 1 Pivot) ✅ COMPLETE
 
 Instead of the Python Tier 3 optimizations, we are pivoting to a full C++ network layer for maximum performance.
 
-- [ ] **[M1-CPP]** Create `CMakeLists.txt` for `module1_lob` linking uWebSockets, librdkafka-c++, prometheus-cpp, and `ashuwhy/lob`.
-- [ ] **[M1-CPP]** Write `module1_lob/lob_server.cpp`: uWebSockets REST API + WebSocket, librdkafka consumer for `raw_orders`, librdkafka producer for `executed_trades`.
-- [ ] **[M1-CPP]** Update `module1_lob/Dockerfile` to compile the C++ server and run it.
-- [ ] **[M1-CPP]** Update `scripts/create_kafka_topics.sh` to also create `executed_trades` topic.
-- [ ] **[M1-CPP]** Remove all deprecated Python wrapper code (`lob_api.py`, `ring_buffer.py`, `bench_threadpool.py`).
-- [ ] **[M1-BENCH]** Run Siege against the new C++ endpoint: `siege -c 200 -t 30S -f module1_lob/urls.txt`; target > 100,000 QPS. Record in `benchmark_runs`.
+- [x] **[M1-CPP]** Create `CMakeLists.txt` for `module1_lob` linking uWebSockets, librdkafka-c++, prometheus-cpp, and `ashuwhy/lob`.
+- [x] **[M1-CPP]** Write `module1_lob/lob_server.cpp`: uWebSockets REST API + WebSocket, librdkafka consumer for `raw_orders`, librdkafka producer for `executed_trades`.
+- [x] **[M1-CPP]** Update `module1_lob/Dockerfile` to compile the C++ server and run it.
+- [x] **[M1-CPP]** Update `scripts/create_kafka_topics.sh` to also create `executed_trades` topic.
+- [x] **[M1-CPP]** Remove all deprecated Python wrapper code (`lob_api.py`, `ring_buffer.py`, `bench_threadpool.py`).
+- [x] **[M1-BENCH]** Run Siege against the new C++ endpoint: `siege -c 200 -t 30S -f module1_lob/urls.txt`; target > 100,000 QPS. Record in `benchmark_runs`.
 
 ---
 
