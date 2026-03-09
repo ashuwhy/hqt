@@ -194,7 +194,7 @@ int main() {
             order_fam.Add({{"symbol", sym}, {"side", j.value("side", "B")}})
                 .Increment();
           }
-          broadcast_depth(sym);
+          // broadcast_depth(sym); // Removed from hot path to reach 100k+ QPS
           return crow::response(201, R"({"status":"success"})");
         } catch (std::exception &e) {
           return crow::response(400, e.what());
@@ -261,6 +261,25 @@ int main() {
       })
       .onmessage(
           [](crow::websocket::connection &, const std::string &, bool) {});
+
+  // ── Background Broadcast Thread ──────────────────────────────────────────
+  std::thread broadcaster([&]() {
+    while (true) {
+      std::vector<std::string> syms;
+      {
+        std::lock_guard<std::mutex> lk(ws_mutex);
+        for (auto const &[sym, conns] : active_ws) {
+          if (!conns.empty())
+            syms.push_back(sym);
+        }
+      }
+      for (const auto &s : syms) {
+        broadcast_depth(s);
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+  });
+  broadcaster.detach();
 
   app.port(8001).multithreaded().run();
   return 0;
