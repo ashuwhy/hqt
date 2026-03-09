@@ -1,99 +1,75 @@
-#include "crow.h"
-#include "lob/book_core.hpp"
-#include "lob/price_levels.hpp" // includes factory declarations appended above
 #include <array>
 #include <atomic>
-#include <chrono>
 #include <condition_variable>
-#include <functional>
+#include <drogon/drogon.h>
 #include <iostream>
 #include <librdkafka/rdkafkacpp.h>
+#include <lob/book_core.hpp>
+#include <lob/price_levels.hpp>
 #include <memory>
 #include <mutex>
-#include <nlohmann/json.hpp>
 #include <prometheus/counter.h>
-#include <prometheus/gauge.h>
 #include <prometheus/registry.h>
 #include <prometheus/text_serializer.h>
 #include <queue>
-#include <sstream>
+#include <simdjson.h>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 
-using json = nlohmann::json;
+using namespace drogon;
 
-// ── Globals
-// ───────────────────────────────────────────────────────────────────
-// Replace global book_mutex with 16 stripes
-std::array<std::mutex, 16> book_mutex_stripes;
-inline std::mutex &get_book_mutex(const std::string &sym) {
-  return book_mutex_stripes[std::hash<std::string>{}(sym) % 16];
+// ── Striped locks ────────────────────────────────────────────────────────────
+std::array<std::mutex, 16> book_mutexes;
+inline std::mutex &get_lock(const std::string &sym) {
+  return book_mutexes[std::hash<std::string>{}(sym) % 16];
 }
 
 std::unordered_map<std::string, std::unique_ptr<lob::BookCore>> books;
-std::unordered_map<std::string, std::unique_ptr<lob::IPriceLevels>> bids_levels;
-std::unordered_map<std::string, std::unique_ptr<lob::IPriceLevels>> asks_levels;
+std::unordered_map<std::string, std::unique_ptr<lob::IPriceLevels>> bid_levels;
+std::unordered_map<std::string, std::unique_ptr<lob::IPriceLevels>> ask_levels;
 std::unordered_map<std::string, std::unique_ptr<lob::IEventLogger>> loggers;
 
-// ── Async Kafka Logging ──────────────────────────────────────────────────
-std::mutex kafka_queue_mutex;
-std::condition_variable kafka_cv;
-std::queue<std::string> kafka_queue;
-bool kafka_running = true;
-
-// ── Prometheus
-// ────────────────────────────────────────────────────────────────
+// ── Prometheus ───────────────────────────────────────────────────────────────
 auto registry = std::make_shared<prometheus::Registry>();
 auto &order_fam = prometheus::BuildCounter()
                       .Name("lob_orders_total")
-                      .Help("Total orders placed")
+                      .Help("Orders placed")
                       .Register(*registry);
 auto &trade_fam = prometheus::BuildCounter()
                       .Name("lob_trades_total")
-                      .Help("Total trades executed")
+                      .Help("Trades executed")
                       .Register(*registry);
 
-// ── Kafka
-// ─────────────────────────────────────────────────────────────────────
+// ── Kafka async queue ────────────────────────────────────────────────────────
 RdKafka::Producer *producer = nullptr;
 RdKafka::Topic *output_topic = nullptr;
+std::mutex kafka_q_mu;
+std::condition_variable kafka_cv;
+std::queue<std::string> kafka_q;
 
-// ── WebSocket ────────────────────────────────────────────────────────────────
-std::mutex ws_mutex;
-std::unordered_map<std::string,
-                   std::unordered_set<crow::websocket::connection *>>
-    active_ws;
-
-// ── KafkaTradeLogger
-// ──────────────────────────────────────────────────────────
-class KafkaTradeLogger : public lob::IEventLogger {
+class KafkaLogger : public lob::IEventLogger {
 public:
-  explicit KafkaTradeLogger(std::string sym) : sym_(std::move(sym)) {}
-
-  void log_new(const lob::NewOrder &, bool, lob::Tick,
-               lob::Timestamp) override {}
-
-  void log_fill(lob::Tick px, lob::Quantity qty, lob::Side liq_side,
-                lob::OrderId passive_id, lob::OrderId taker_id,
+  explicit KafkaLogger(std::string sym) : sym_(std::move(sym)) {}
+  void log_fill(lob::Tick px, lob::Quantity qty, lob::Side liq,
+                lob::OrderId pass, lob::OrderId take,
                 lob::Timestamp ts) override {
-    json t;
-    t["ts"] = ts;
-    t["symbol"] = sym_;
-    t["price"] = static_cast<double>(px) / 1e8;
-    t["qty"] = static_cast<double>(qty) / 1e8;
-    t["liquidity_side"] = (liq_side == lob::Side::Bid) ? "Bid" : "Ask";
-    t["passive_id"] = passive_id;
-    t["taker_id"] = taker_id;
-    std::string payload = t.dump();
+    char buf[256];
+    int n = snprintf(
+        buf, sizeof(buf),
+        R"({"ts":%ld,"symbol":"%s","price":%.8f,"qty":%.8f,"liquidity_side":"%s","passive_id":%lu,"taker_id":%lu})",
+        ts, sym_.c_str(), static_cast<double>(px) / 1e8,
+        static_cast<double>(qty) / 1e8, liq == lob::Side::Bid ? "Bid" : "Ask",
+        pass, take);
     {
-      std::lock_guard<std::mutex> lk(kafka_queue_mutex);
-      kafka_queue.push(std::move(payload));
+      std::lock_guard lk(kafka_q_mu);
+      kafka_q.emplace(buf, n);
     }
     kafka_cv.notify_one();
     trade_fam.Add({{"symbol", sym_}}).Increment();
   }
-
+  void log_new(const lob::NewOrder &, bool, lob::Tick,
+               lob::Timestamp) override {}
   void log_cancel(lob::OrderId, lob::Timestamp) override {}
   void set_snapshot_sources(const lob::IPriceLevels *,
                             const lob::IPriceLevels *) override {}
@@ -104,101 +80,86 @@ private:
   std::string sym_;
 };
 
-// ── Book factory
-// ────────────────────────────────────────────────────────────── Uses
-// lob::make_bid_levels() / make_ask_levels() from price_levels.hpp (factory
-// functions appended to engine's price_levels.cpp + price_levels.hpp)
-lob::BookCore *get_book(const std::string &symbol) {
-  if (books.find(symbol) == books.end()) {
-    bids_levels[symbol] =
-        lob::make_bid_levels(); // ← factory, no exposure of concrete type
-    asks_levels[symbol] = lob::make_ask_levels();
-    loggers[symbol] = std::make_unique<KafkaTradeLogger>(symbol);
-    books[symbol] = std::make_unique<lob::BookCore>(
-        *bids_levels[symbol], *asks_levels[symbol], loggers[symbol].get());
-  }
-  return books[symbol].get();
+// ── Book factory ─────────────────────────────────────────────────────────────
+lob::BookCore *get_book(const std::string &sym) {
+  auto it = books.find(sym);
+  if (it != books.end())
+    return it->second.get();
+  bid_levels[sym] = lob::make_bid_levels();
+  ask_levels[sym] = lob::make_ask_levels();
+  loggers[sym] = std::make_unique<KafkaLogger>(sym);
+  books[sym] = std::make_unique<lob::BookCore>(
+      *bid_levels[sym], *ask_levels[sym], loggers[sym].get());
+  return books[sym].get();
 }
 
-// ── Kafka init
-// ────────────────────────────────────────────────────────────────
+// ── Kafka init ───────────────────────────────────────────────────────────────
 void init_kafka() {
-  std::string errstr;
+  std::string err;
   auto *conf = RdKafka::Conf::create(RdKafka::Conf::CONF_GLOBAL);
   const char *boot = std::getenv("KAFKA_BOOTSTRAP_SERVERS");
-  conf->set("bootstrap.servers", boot ? boot : "kafka:9092", errstr);
-  producer = RdKafka::Producer::create(conf, errstr);
+  conf->set("bootstrap.servers", boot ? boot : "kafka:9092", err);
+  producer = RdKafka::Producer::create(conf, err);
   if (!producer) {
-    std::cerr << "[kafka] " << errstr << "\n";
+    std::cerr << "Kafka: " << err << "\n";
     return;
   }
   output_topic =
-      RdKafka::Topic::create(producer, "executed_trades", nullptr, errstr);
+      RdKafka::Topic::create(producer, "executed_trades", nullptr, err);
   delete conf;
 }
 
-// ── Depth broadcast
-// ───────────────────────────────────────────────────────────
-void broadcast_depth(const std::string &sym) {
-  std::string depth_json;
-  {
-    std::lock_guard<std::mutex> lk(get_book_mutex(sym));
-    if (books.find(sym) == books.end())
-      return;
-    auto *bk = get_book(sym);
-    auto bids_raw = bk->topN(lob::Side::Bid, 10);
-    auto asks_raw = bk->topN(lob::Side::Ask, 10);
-    json res;
-    res["type"] = "DEPTH_UPDATE";
-    res["symbol"] = sym;
-    res["bids"] = json::array();
-    res["asks"] = json::array();
-    for (auto &[p, q] : bids_raw)
-      res["bids"].push_back(
-          {static_cast<double>(p) / 1e8, static_cast<double>(q) / 1e8});
-    for (auto &[p, q] : asks_raw)
-      res["asks"].push_back(
-          {static_cast<double>(p) / 1e8, static_cast<double>(q) / 1e8});
-    depth_json = res.dump();
-  }
-  std::lock_guard<std::mutex> lk(ws_mutex);
-  auto it = active_ws.find(sym);
-  if (it != active_ws.end())
-    for (auto *conn : it->second)
-      conn->send_text(depth_json);
-}
-
-// ── main
-// ──────────────────────────────────────────────────────────────────────
 int main() {
   init_kafka();
-  crow::SimpleApp app;
 
-  CROW_ROUTE(app, "/lob/order")
-      .methods(crow::HTTPMethod::POST)([](const crow::request &req) {
+  // Kafka background worker
+  std::thread([] {
+    while (true) {
+      std::string payload;
+      {
+        std::unique_lock lk(kafka_q_mu);
+        kafka_cv.wait(lk, [] { return !kafka_q.empty(); });
+        payload = std::move(kafka_q.front());
+        kafka_q.pop();
+      }
+      if (producer && output_topic)
+        producer->produce(output_topic, RdKafka::Topic::PARTITION_UA,
+                          RdKafka::Producer::RK_MSG_COPY, payload.data(),
+                          payload.size(), nullptr, nullptr);
+      producer->poll(0);
+    }
+  }).detach();
+
+  // ── POST /lob/order ───────────────────────────────────────────────────────
+  app().registerHandler(
+      "/lob/order",
+      [](const HttpRequestPtr &req,
+         std::function<void(const HttpResponsePtr &)> &&cb) {
+        thread_local simdjson::ondemand::parser parser;
         try {
-          auto j = json::parse(req.body);
-          auto sym = j.value("symbol", "");
-          if (sym.empty())
-            return crow::response(400, R"({"error":"missing symbol"})");
+          auto body = req->getBody();
+          simdjson::padded_string padded(body.data(), body.size());
+          auto doc = parser.iterate(padded);
 
-          std::string side_str = j.value("side", "");
-          if (side_str != "B" && side_str != "A")
-            return crow::response(
-                400, R"({"error":"invalid side: must be 'B' or 'A'"})");
+          std::string sym(doc["symbol"].get_string().value());
+          std::string side_s(doc["side"].get_string().value());
+          double price = doc["price"].get_double().value();
+          double qty = doc["quantity"].get_double().value();
 
-          double price = j.value("price", 0.0);
-          double qty = j.value("quantity", 0.0);
-          if (price <= 0 || qty <= 0)
-            return crow::response(
-                400, R"({"error":"price and quantity must be positive"})");
+          if (sym.empty() || (side_s != "B" && side_s != "A") || price <= 0 ||
+              qty <= 0) {
+            cb(HttpResponse::newHttpResponse());
+            return;
+          }
 
-          lob::NewOrder o;
+          std::string order_type(doc["ordertype"].get_string().value_unsafe());
+
           static std::atomic<uint64_t> gid{1};
+          lob::NewOrder o{};
           o.id = gid++;
           o.user = 1;
           o.seq = o.id;
-          o.side = (side_str == "B") ? lob::Side::Bid : lob::Side::Ask;
+          o.side = (side_s == "B") ? lob::Side::Bid : lob::Side::Ask;
           o.price = static_cast<lob::Tick>(price * 1e8);
           o.qty = static_cast<lob::Quantity>(qty * 1e8);
           o.ts = std::chrono::duration_cast<std::chrono::nanoseconds>(
@@ -207,130 +168,87 @@ int main() {
           o.flags = 0;
 
           {
-            std::lock_guard<std::mutex> lk(get_book_mutex(sym));
+            std::lock_guard lk(get_lock(sym));
             auto *bk = get_book(sym);
-            if (j.value("order_type", "LIMIT") == "LIMIT")
+            if (order_type == "LIMIT")
               bk->submit_limit(o);
             else
               bk->submit_market(o);
-            order_fam.Add({{"symbol", sym}, {"side", j.value("side", "B")}})
-                .Increment();
           }
-          // broadcast_depth(sym); // Removed from hot path to reach 100k+ QPS
-          return crow::response(201, R"({"status":"success"})");
-        } catch (std::exception &e) {
-          return crow::response(400, e.what());
+          order_fam.Add({{"symbol", sym}, {"side", side_s}}).Increment();
+
+          auto resp = HttpResponse::newHttpResponse();
+          resp->setStatusCode(k201Created);
+          resp->setContentTypeCode(CT_APPLICATION_JSON);
+          resp->setBody(R"({"status":"success"})");
+          cb(resp);
+        } catch (...) {
+          auto resp = HttpResponse::newHttpResponse();
+          resp->setStatusCode(k400BadRequest);
+          cb(resp);
         }
-      });
+      },
+      {Post});
 
-  CROW_ROUTE(app, "/lob/depth/<path>")
-  ([](const std::string &symbol) {
-    std::lock_guard<std::mutex> lk(get_book_mutex(symbol));
-    auto *bk = get_book(symbol);
-    auto bids_raw = bk->topN(lob::Side::Bid, 10);
-    auto asks_raw = bk->topN(lob::Side::Ask, 10);
-    json res;
-    res["bids"] = json::array();
-    res["asks"] = json::array();
-    for (auto &[p, q] : bids_raw)
-      res["bids"].push_back(
-          {static_cast<double>(p) / 1e8, static_cast<double>(q) / 1e8});
-    for (auto &[p, q] : asks_raw)
-      res["asks"].push_back(
-          {static_cast<double>(p) / 1e8, static_cast<double>(q) / 1e8});
-    return crow::response(200, res.dump());
-  });
+  // ── GET /lob/depth/<symbol> ───────────────────────────────────────────────
+  app().registerHandler("/lob/depth/{symbol}",
+                        [](const HttpRequestPtr &req,
+                           std::function<void(const HttpResponsePtr &)> &&cb,
+                           const std::string &symbol) {
+                          Json::Value res;
+                          res["bids"] = Json::arrayValue;
+                          res["asks"] = Json::arrayValue;
+                          {
+                            std::lock_guard lk(get_lock(symbol));
+                            auto *bk = get_book(symbol);
+                            for (auto [p, q] : bk->topN(lob::Side::Bid, 10)) {
+                              Json::Value entry = Json::arrayValue;
+                              entry.append(static_cast<double>(p) / 1e8);
+                              entry.append(static_cast<double>(q) / 1e8);
+                              res["bids"].append(entry);
+                            }
+                            for (auto [p, q] : bk->topN(lob::Side::Ask, 10)) {
+                              Json::Value entry = Json::arrayValue;
+                              entry.append(static_cast<double>(p) / 1e8);
+                              entry.append(static_cast<double>(q) / 1e8);
+                              res["asks"].append(entry);
+                            }
+                          }
+                          auto resp = HttpResponse::newHttpJsonResponse(res);
+                          cb(resp);
+                        },
+                        {Get});
 
-  CROW_ROUTE(app, "/lob/health")
-  ([]() {
-    json syms = json::array();
-    // Health check needs to iterate all stripes or just be approximate.
-    // For simplicity, we'll just check existence.
-    for (int i = 0; i < 16; ++i) {
-      std::lock_guard<std::mutex> lk(book_mutex_stripes[i]);
-    }
-    for (auto &[k, _] : books)
-      syms.push_back(k);
-    return crow::response(
-        200, json{{"status", "OK"}, {"active_symbols", syms}}.dump());
-  });
+  // ── GET /lob/health ───────────────────────────────────────────────────────
+  app().registerHandler("/lob/health",
+                        [](const HttpRequestPtr &,
+                           std::function<void(const HttpResponsePtr &)> &&cb) {
+                          Json::Value res;
+                          res["status"] = "OK";
+                          res["active_symbols"] = Json::arrayValue;
+                          for (int i = 0; i < 16; i++) {
+                            std::lock_guard lk(book_mutexes[i]);
+                            for (auto &[k, _] : books)
+                              res["active_symbols"].append(k);
+                          }
+                          cb(HttpResponse::newHttpJsonResponse(res));
+                        },
+                        {Get});
 
-  CROW_ROUTE(app, "/metrics")
-  ([]() {
-    std::ostringstream oss;
-    prometheus::TextSerializer{}.Serialize(oss, registry->Collect());
-    auto resp = crow::response(200, oss.str());
-    resp.set_header("Content-Type", "text/plain; version=0.0.4");
-    return resp;
-  });
+  // ── GET /metrics ──────────────────────────────────────────────────────────
+  app().registerHandler(
+      "/metrics",
+      [](const HttpRequestPtr &,
+         std::function<void(const HttpResponsePtr &)> &&cb) {
+        std::ostringstream oss;
+        prometheus::TextSerializer{}.Serialize(oss, registry->Collect());
+        auto resp = HttpResponse::newHttpResponse();
+        resp->setContentTypeString("text/plain; version=0.0.4");
+        resp->setBody(oss.str());
+        cb(resp);
+      },
+      {Get});
 
-  CROW_WEBSOCKET_ROUTE(app, "/lob/stream/<path>")
-      .onaccept([](const crow::request &req, void **userdata) -> bool {
-        std::string url = req.url;
-        *userdata = new std::string(url.substr(url.rfind('/') + 1));
-        return true;
-      })
-      .onopen([](crow::websocket::connection &conn) {
-        auto *sym = static_cast<std::string *>(conn.userdata());
-        if (!sym)
-          return;
-        std::lock_guard<std::mutex> lk(ws_mutex);
-        active_ws[*sym].insert(&conn);
-      })
-      .onclose([](crow::websocket::connection &conn, const std::string &) {
-        auto *sym = static_cast<std::string *>(conn.userdata());
-        if (sym) {
-          std::lock_guard<std::mutex> lk(ws_mutex);
-          active_ws[*sym].erase(&conn);
-          delete sym;
-        }
-      })
-      .onmessage(
-          [](crow::websocket::connection &, const std::string &, bool) {});
-
-  // ── Kafka Background Worker ─────────────────────────────────────────────
-  std::thread kafka_worker([]() {
-    while (kafka_running) {
-      std::string payload;
-      {
-        std::unique_lock<std::mutex> lk(kafka_queue_mutex);
-        kafka_cv.wait(lk,
-                      []() { return !kafka_queue.empty() || !kafka_running; });
-        if (!kafka_running && kafka_queue.empty())
-          break;
-        payload = std::move(kafka_queue.front());
-        kafka_queue.pop();
-      }
-      if (producer && output_topic) {
-        producer->produce(output_topic, RdKafka::Topic::PARTITION_UA,
-                          RdKafka::Producer::RK_MSG_COPY,
-                          const_cast<char *>(payload.c_str()), payload.size(),
-                          nullptr, nullptr);
-        producer->poll(0);
-      }
-    }
-  });
-  kafka_worker.detach();
-
-  // ── Background Broadcast Thread ──────────────────────────────────────────
-  std::thread broadcaster([&]() {
-    while (true) {
-      std::vector<std::string> syms;
-      {
-        std::lock_guard<std::mutex> lk(ws_mutex);
-        for (auto const &[sym, conns] : active_ws) {
-          if (!conns.empty())
-            syms.push_back(sym);
-        }
-      }
-      for (const auto &s : syms) {
-        broadcast_depth(s);
-      }
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
-  });
-  broadcaster.detach();
-
-  app.port(8001).concurrency(64).multithreaded().run();
+  app().setThreadNum(64).addListener("0.0.0.0", 8001).run();
   return 0;
 }
