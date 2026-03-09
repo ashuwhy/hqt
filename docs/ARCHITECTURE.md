@@ -7,227 +7,311 @@
 ## 1. High-Level Data Flow
 
 ```
-[Binance/Alpha Vantage WebSocket]
+[Binance / Alpha Vantage WebSocket]
           │
           ▼
-   [Apache Kafka]  ←── raw_orders topic (4 partitions)
+   [Apache Kafka :9092]  ◄── raw_orders topic (4 partitions)
           │
     ┌─────┴──────────────────────────────────────┐
     │                                            │
     ▼                                            ▼
-[Module 1: LOB Engine]                 [Module 2: TimescaleDB]
+[Module 1: LOB Engine :8001]           [Module 2: TimescaleDB :8002]
  C++20 Core (ashuwhy/lob submodule)     Hypertable: raw_ticks
- pybind11 Python bindings               Continuous Aggregates: ohlcv_1m/5m/15m/1h
- LMAX ring buffer + 3-thread pipeline   SQL Indicators: VWAP, SMA20, Bollinger, RSI14
- FastAPI REST + WebSocket API                    │
+ pybind11 Python bindings (olob)        Continuous Aggregates: ohlcv_1m/5m/15m/1h
+ LMAX ring buffer, 3-thread pipeline    SQL Indicators: VWAP, SMA20, Bollinger, RSI14
+ FastAPI REST + WebSocket API           FastAPI analytics router
     │                                            │
-    │ best-bid rates (every 500ms)               │
+    │ best-bid / best-ask (every 500ms)          │
     ▼                                            │
-[Module 3: Apache AGE Graph]                     │
- Directed weighted fx_graph                      │
- 20+ Asset nodes, EXCHANGE edges                 │
- Cypher arbitrage path queries                   │
+[Module 3: Graph Layer — Apache AGE]             │
+ Directed weighted fx_graph (20+ nodes)          │
+ *** Bellman-Ford PRIMARY arbitrage ***          │
+ Cypher graph query interface                    │
+ Writes method='CLASSICAL' signals every 500ms  │
     │                                            │
+    │ rate matrix JSON (/graph/rates)            │
     ▼                                            │
-[Module 4: Qiskit Quantum Engine]                │
- Grover's Algorithm O(√N)                        │
- Writes → arbitrage_signals table                │
+[Module 4: Quantum Engine :8004]                 │
+ *** Grover's Algorithm RESEARCH ONLY ***        │
+ Runs every 10s for benchmarking only           │
+ Writes method='QUANTUM' signals                │
+ benchmark_quantum.png: BF flat / Grover exp.   │
     │                                            │
     └─────────────┬──────────────────────────────┘
                   ▼
        [Module 5: FastAPI Security Proxy :8000]
         SQL injection AST firewall (sqlglot)
         Redis sliding-window rate limiter (1000 req/s/IP)
-        Prometheus metrics exposition
+        Prometheus metrics at /metrics
                   │
                   ▼
         [Prometheus :9090 + Grafana :3000]
-         5-panel live dashboard
-         postgres-exporter, redis-exporter, node-exporter
+         5-panel dashboard (Panel 4 shows CLASSICAL + QUANTUM signals)
+         postgres-exporter :9187 | redis-exporter :9121 | node-exporter :9100
 ```
 
 ---
 
-## 2. Component Inventory
+## 2. Architecture Decision Record — Bellman-Ford vs Quantum
 
-| Component | Technology | Port | Owned By |
-|-----------|-----------|------|---------|
-| Market data ingestor | Python WebSocket client | — | -- |
-| Kafka broker | Apache Kafka 7.6.0 (Confluent) | 9092 | -- |
-| LOB matching engine | C++20 Core (`ashuwhy/lob`) + Python 3.12 FastAPI wrapper | 8001 | -- |
-| TimescaleDB | PostgreSQL 16 + TimescaleDB 2.x | 5432 | -- |
-| Apache AGE graph layer | PostgreSQL 16 + AGE extension (same PG instance) | 5432 | -- |
-| Qiskit quantum engine | Python 3.12 + Qiskit 0.45 + AerSimulator | 8004 | -- |
-| Security proxy | FastAPI + sqlglot + Redis 7 | 8000 (public) | -- |
-| Redis | Redis 7-alpine | 6379 | -- |
-| Prometheus | Prometheus 2.48 | 9090 | -- |
-| Grafana | Grafana 10.3 | 3000 | -- |
-| postgres-exporter | prometheuscommunity/postgres-exporter | 9187 | -- |
-| redis-exporter | oliver006/redis_exporter | 9121 | -- |
-| node-exporter | prom/node-exporter | 9100 | -- |
+**Decision Date:** March 9, 2026
+**Status:** ACCEPTED — applies to Modules 3, 4, 5, and the final report
+
+### Decision
+
+Bellman-Ford is the **primary production arbitrage algorithm**.
+Grover's Algorithm (Qiskit AerSimulator) is a **research benchmark only**.
+
+### Rationale
+
+| Criterion | Bellman-Ford | Grover (AerSimulator) |
+|-----------|-------------|----------------------|
+| Correctness | 100% deterministic | ~50–85% probabilistic |
+| Speed at N=20 | < 5 ms | ~10,000 ms |
+| Finds ALL cycles | Yes | No (most probable only) |
+| Production viable | Yes | No (simulation overhead inverts advantage) |
+| Academic value | High — graph algorithms | High — complexity theory proof |
+
+### Implementation Rule
+
+- **Bellman-Ford** runs every 500ms inside `quantum_service.py` background loop; inserts `method='CLASSICAL'` rows into `arbitrage_signals`
+- **Grover** runs every 10s in the same service for benchmarking only; inserts `method='QUANTUM'` rows
+- Both write to the same `arbitrage_signals` table, distinguished by the `method` column
+- Grafana Panel 4 displays both streams, colour-coded
+- `benchmark_quantum.png` — BF as the near-flat line and Grover rising exponentially — is the **expected, documented result** and becomes the strongest slide in the report
 
 ---
 
-## 3. LOB Engine – External Submodule
+## 3. Architecture Decision Record — LOB Network Layer (Python vs C++)
 
-### 3.1 Source Repository
+**Decision Date:** March 9, 2026
+**Status:** ACCEPTED — Python FastAPI retained for Phase 1; optimizations documented for future pivot
+
+### Three Tiers of LOB Network Performance
+
+| Tier | Approach | Est. QPS | Complexity | Decision |
+|------|----------|---------|-----------|---------|
+| **Tier 1** | C++ network layer (uWebSockets / Drogon) | **100,000+** | Very high — rewrite `lob_api.py` → `lob_api.cpp`; packets arrive directly into C++ memory | Future HFT pivot |
+| **Tier 2** | Persistent WebSocket / TCP socket (binary frames) | **10,000+** | Medium — eliminate per-request HTTP handshake overhead; stream binary data over single open connection | Future optimisation |
+| **Tier 3** | Python FastAPI + quick wins | **5,000+** | Low — two targeted changes to existing code | **Current implementation** |
+
+### Why We Are Moving to C++ for Phase 1 (Tier 1)
+
+The bottleneck in a Python setup is **network I/O, not the C++ matching math**. While Python FastAPI provides a good starting point, real HFT systems require nanosecond-level packet handling. By rewriting the network layer in C++ using `uWebSockets` (or similar), packets arrive directly into C++ memory, get matched, and respond in microseconds. This is how real crypto exchanges (Binance, OKX) are built.
+
+This pivot alters some architectural boundaries:
+
+1. **Network**: REST and WebSocket APIs are now served directly by C++ (`uWebSockets`)
+2. **Ingestion**: The C++ engine consumes `raw_orders` directly from Kafka using `librdkafka`
+3. **Persistence**: Instead of Python `psycopg3.copy()` inside the matching engine, the C++ engine publishes matched trades to a new `executed_trades` Kafka topic. Module 2 (`data-ingestor`) consumes this and writes to TimescaleDB.
+4. **Metrics**: Prometheus metrics are natively exposed via `prometheus-cpp`
+
+### Tier 1: Full C++ Network Layer (HFT Pivot)
+
+We will build the module using the following pattern:
+
+```cpp
+// lob_server.cpp — Crow C++ framework server calling C++ OrderBook directly
+#include "crow.h"
+#include "lob/book_core.hpp"
+
+// ... Kafka consumer thread for raw_orders ...
+// ... Kafka producer thread for executed_trades ...
+
+int main() {
+    crow::SimpleApp app;
+
+    CROW_ROUTE(app, "/lob/order").methods(crow::HTTPMethod::POST)
+    ([&book](const crow::request& req) {
+        Order o = parse_json(req.body);        // zero-copy parse
+        auto trades = book.place(o);           // nanosecond match
+        return crow::response(201, to_json(trades));
+    });
+
+    app.port(8001).multithreaded().run();
+}
+```
+
+**Conclusion:** We are pivoting to the Tier 1 C++ implementation for the LOB engine.
+
+---
+
+## 4. Component Inventory
+
+| Component | Technology | Port | Owner |
+|-----------|-----------|------|-------|
+| Market data ingestor | Python WebSocket client | — | Member 2 |
+| Kafka broker | Confluent CP-Kafka 7.6.0 | 9092 | Member 2 |
+| Zookeeper | Confluent CP-Zookeeper 7.6.0 | 2181 | Member 2 |
+| LOB matching engine | C++20 core + uWebSockets + librdkafka | 8001 | Member 1 |
+| TimescaleDB analytics | PostgreSQL 16 + TimescaleDB 2.x + FastAPI router | 5432 / 8002 | Member 2 |
+| Apache AGE graph layer | PostgreSQL 16 + AGE (same PG instance) | 5432 | Member 3 |
+| Quantum engine | Python 3.12 + Qiskit 0.45 + AerSimulator | 8004 | Member 4 |
+| Security proxy | FastAPI + sqlglot + Redis 7 | 8000 (public) | Member 5 |
+| Redis | Redis 7-alpine | 6379 | Member 5 |
+| Prometheus | Prometheus 2.48 | 9090 | Member 5 |
+| Grafana | Grafana 10.3 | 3000 | Member 5 |
+| postgres-exporter | prometheuscommunity/postgres-exporter | 9187 | Member 5 |
+| redis-exporter | oliver006/redis_exporter | 9121 | Member 5 |
+| node-exporter | prom/node-exporter | 9100 | Member 5 |
+
+---
+
+## 5. LOB Engine — External Git Submodule
+
+### 4.1 Source Repository
 
 ```
-Git Submodule: https://github.com/ashuwhy/lob
+Submodule URL: https://github.com/ashuwhy/lob
 Mount path:    module1_lob/engine/
 ```
 
-### 3.2 C++ Core Components (from submodule)
+### 4.2 C++ Core Files
 
 | File | Purpose |
 |------|---------|
-| `cpp/src/book_core.cpp` | Main matching engine — Red-Black Tree + FIFO queues |
+| `cpp/src/book_core.cpp` | Matching engine — Red-Black Tree + FIFO queues per price level |
 | `cpp/src/price_levels.cpp` | Price-level management |
-| `cpp/include/lob/mempool.hpp` | Arena allocator / memory pool |
-| `cpp/src/replay.cpp` | TAQ event replay engine |
+| `cpp/include/lob/mempool.hpp` | Arena allocator / lock-free memory pool |
+| `cpp/src/replay.cpp` | TAQ event replay |
 | `cpp/src/taq_writer.cpp` | Trade-and-quote writer |
 | `python/olob/_bindings.cpp` | pybind11 bridge → Python `olob` module |
 
-### 3.3 Python Package
+### 4.3 Confirming pybind11 Class Names
 
-```python
-from olob import OrderBook, Side, OrderType   # compiled C++ via pybind11
-book = OrderBook()
-book.add_limit_order(side=Side.BUY, price=65000.0, qty=0.5)
+Before writing `lob_api.py`, verify actual exposed names:
+
+```bash
+grep "py::class_" module1_lob/engine/python/olob/_bindings.cpp
 ```
 
-### 3.4 Benchmark Baseline (pre-existing)
+Expected: `OrderBook` / `NewOrder` / `bk.poll_trades()` — align API code to actual names.
 
-- `bench_out/latencies.csv` — nanosecond-level latency measurements
-- `bench_out/latency_histogram.png` — distribution chart
+### 4.4 Pre-existing Benchmark Baseline
+
+- `bench_out/latencies.csv` — nanosecond-level measurements
+- `bench_out/latency_histogram.png` — embed in final report
 - Target: > 100,000 order ops/sec at p99 < 10ms
 
 ---
 
-## 4. Inter-Module Contracts
+## 6. Inter-Module Contracts
 
-### 4.1 LOB Engine → TimescaleDB
+### 5.1 LOB Engine → TimescaleDB
 
-- **Method:** Batch INSERT via COPY protocol (`psycopg3 copy()`)
-- **Trigger:** Every 100ms or 1,000 trades (whichever comes first)
-- **Payload:** `(ts, symbol, price, volume, side, order_id, trade_id)`
+- **Method:** `librdkafka` C++ Producer to `executed_trades` Kafka topic. Module 2 Python `data-ingestor` consumes this topic and uses `psycopg3.copy()` binary COPY.
+- **Trigger:** Real-time push to Kafka
+- **Payload:** `(ts, symbol, price, volume, side, order_id, trade_id)` → `raw_ticks`
 
-### 4.2 LOB Engine → Apache AGE
+### 5.2 LOB Engine → Apache AGE
 
-- **Method:** Background asyncio worker polls `GET /lob/depth/{symbol}` every 500ms
-- **Action:** `MATCH … SET r.bid = $new_bid` via AGE Cypher
-- **Latency target:** Edge weight updated within 600ms of LOB price change
+- **Method:** `edge_weight_updater.py` asyncio loop, 500ms interval
+- **Query:** `GET http://lob-engine:8001/lob/depth/{symbol}`
+- **Action:** Cypher `MATCH (a)-[r:EXCHANGE]->(b) SET r.bid=$bid, r.ask=$ask, r.last_updated=timestamp()`
+- **Latency target:** Edge updated within 600ms of LOB price change
 
-### 4.3 Apache AGE → Qiskit Engine
+### 5.3 Apache AGE → Bellman-Ford (Primary — every 500ms)
 
-- **Method:** Python function call (`run_grover(rates_matrix, nodes)`) or `POST /quantum/run-grover`
-- **Payload:** N×N float adjacency matrix (exchange rates)
-- **Frequency:** Every 1 second (or on-demand)
+- **Method:** `build_rate_matrix(conn)` queries all AGE `EXCHANGE` edges via psycopg3
+- **Output:** INSERT `arbitrage_signals` with `method='CLASSICAL'`
 
-### 4.4 Qiskit Engine → PostgreSQL
+### 5.4 Apache AGE → Grover (Benchmark — every 10s)
 
-- **Method:** `psycopg3` INSERT into `arbitrage_signals`
-- **Payload:** `(ts, path, profit_pct, circuit_depth, grover_iterations, classical_ms, quantum_ms, graph_size_n, method)`
+- **Method:** `GET /graph/rates` returns N×N float adjacency matrix JSON
+- **Output:** INSERT `arbitrage_signals` with `method='QUANTUM'`
 
-### 4.5 All Modules → FastAPI Security Proxy
+### 5.5 All Modules → FastAPI Security Proxy
 
-- **Method:** All external HTTP/WS requests routed through port 8000
-- **Security layers:** Rate-limit check → SQL AST validation → forward to internal service
+- All external traffic enters only through port 8000
+- Middleware order: rate-limit check → SQL AST validation → proxy to internal service
 
-### 4.6 Prometheus Scraping
+### 5.6 Prometheus Scraping (15s interval)
 
-| Target | Endpoint | Interval |
-|--------|---------|---------|
-| FastAPI proxy | `hqt-fastapi:8000/metrics` | 15s |
-| LOB engine | `hqt-lob:8001/metrics` | 15s |
-| postgres-exporter | `postgres-exporter:9187` | 15s |
-| redis-exporter | `redis-exporter:9121` | 15s |
-| node-exporter | `node-exporter:9100` | 15s |
-
----
-
-## 5. Concurrency Model (Module 1)
-
-```
-Thread A: InboundThread
-  └── confluent_kafka.Consumer on 'raw_orders'
-  └── Writes OrderEvent → LMAX Ring Buffer (2^20 slots)
-
-Thread B: MatchingThread
-  └── Reads from Ring Buffer
-  └── Calls C++ OrderBook via pybind11 (olob)
-  └── Emits TradeEvent → output buffer
-
-Thread C: PersistenceThread
-  └── Reads TradeEvents (batch ≤ 1000 or 100ms timeout)
-  └── psycopg3 binary COPY → raw_ticks + trades (TimescaleDB)
-```
-
-Ring buffer: fixed `2^20`-slot array, sequence-number lock-free (no mutex).
+| Job | Target | Port |
+|----|--------|------|
+| `fastapi` | `hqt-fastapi:8000/metrics` | 8000 |
+| `lob-engine` | `hqt-lob:8001/metrics` | 8001 |
+| `postgres` | `postgres-exporter:9187` | 9187 |
+| `redis` | `redis-exporter:9121` | 9121 |
+| `node` | `node-exporter:9100` | 9100 |
 
 ---
 
-## 6. Docker Compose Service Graph
+## 7. Concurrency Model (Module 1 - C++)
 
 ```
-zookeeper ──► kafka ──► kafka-setup (one-shot topic creator, exits 0)
+Thread A — InboundThread
+  └── librdkafka Consumer on 'raw_orders'
+  └── Writes OrderEvent → Lock-free Queue / Ring Buffer
+
+Thread B — MatchingThread
+  └── Reads from inbound queue
+  └── Calls C++ OrderBook
+  └── Emits TradeEvent → Outbound queue
+  └── Evaluates uWebSockets broadcast for depth updates
+
+Thread C — PersistenceThread (Outbound)
+  └── Reads TradeEvents
+  └── librdkafka Producer → 'executed_trades' Kafka topic
+```
+
+---
+
+## 8. Docker Compose Service Graph
+
+```
+zookeeper ──► kafka ──► kafka-setup (one-shot, creates raw_orders topic, exits 0)
                   │
                   ├──► lob-engine       :8001  (depends_on: kafka, postgres)
-                  └──► data-ingestor          (depends_on: kafka, postgres)
+                  └──► data-ingestor    :8002  (depends_on: kafka, postgres)
 
 postgres  ──► quantum-engine  :8004  (depends_on: postgres)
           └──► lob-engine
 
 postgres + redis + lob-engine + quantum-engine ──► fastapi-proxy :8000
+  ⚠ fastapi-proxy depends on quantum-engine: service_started
+    (NOT service_healthy — quantum /health was missing in placeholder)
 
-fastapi-proxy ──► prometheus :9090
-postgres-exporter :9187 ──► prometheus
-redis-exporter    :9121 ──► prometheus
-node-exporter     :9100 ──► prometheus
+fastapi-proxy      ──► prometheus :9090
+postgres-exporter  ──► prometheus
+redis-exporter     ──► prometheus
+node-exporter      ──► prometheus
 
 prometheus ──► grafana :3000
 ```
 
----
+### Known docker-compose Bugs (fix in Phase 0)
 
-## 7. Security Architecture
-
-```
-External Request (port 8000)
-      │
-      ▼
-Middleware 1 – Redis Sliding-Window Rate Limiter
-  └── key: f"rl:{client_ip}"  window: 1s  limit: 1000 req
-  └── Exceeded → HTTP 429 + INSERT security_events (RATE_LIMIT)
-  └── Redis down → fallback in-process token bucket
-      │
-      ▼
-Middleware 2 – SQL Injection AST Firewall (sqlglot)
-  └── Scans: request body + query params
-  └── Banned pattern match OR sqlglot AST detects DROP/TRUNCATE/UNION SELECT/xp_/EXEC
-  └── Blocked → HTTP 403 + INSERT security_events (SQL_INJECTION)
-      │
-      ▼
-Proxy forward to internal service router
-  ├── /lob/*        → hqt-lob:8001
-  ├── /analytics/*  → module2 router (same process)
-  ├── /graph/*      → module3 router (same process)
-  └── /quantum/*    → quantum-engine:8004
-```
-
-Banned SQL patterns: `DROP`, `TRUNCATE`, `UNION SELECT`, `--`, `/*`, `xp_`, `EXEC`, `INSERT INTO information_schema`
+- `redis-exporter` missing `REDIS_ADDR: redis://redis:6379` env var → Prometheus target DOWN
+- `postgres-exporter` `DATA_SOURCE_NAME` missing `?sslmode=disable` → SSL error
+- `lob-engine`, `data-ingestor`, `quantum-engine`, `fastapi-proxy` all missing `env_file: - .env`
 
 ---
 
-## 8. Known Issues Fixed (vs. Initial Codebase)
+## 9. Security Architecture
 
-| File | Bug | Fix |
-|------|-----|-----|
-| `init.sql` | `ohlcv_5m`, `ohlcv_15m`, `ohlcv_1h` missing | Added all 3 CAs with refresh policies |
-| `init.sql` | `trades` PK was `(trade_id, ts)` composite — FK refs fail | Changed to `PRIMARY KEY (trade_id)` |
-| `init.sql` | `arbitrage_signals` PK was `(signal_id, ts)` composite | Changed to `PRIMARY KEY (signal_id)` |
-| `init.sql` | `security_events` PK was `(event_id, ts)` composite | Changed to `PRIMARY KEY (event_id)` |
-| `docker-compose.yml` | 7 services missing | Added all 7 |
-| `prometheus.yml` | Scraped non-existent containers | Fixed after adding services |
-| Project root | `.env.example` missing | Created |
-| Project root | `raw_orders` Kafka topic never auto-created | Added `kafka-setup` one-shot container |
+```
+External Request → port 8000
+      │
+      ▼
+Middleware 1 — Redis Sliding-Window Rate Limiter
+  INCR rl:{ip} + EXPIRE 1s | limit 1,000 req/s/IP
+  Blocked  → HTTP 429 + INSERT security_events (RATE_LIMIT)
+  Redis down → fallback to in-process threading.Semaphore token bucket
+      │
+      ▼
+Middleware 2 — SQL Injection AST Firewall (sqlglot)
+  sqlglot.parse() walks AST for DDL node types (Drop, Truncate, Create)
+  String scan: DROP | TRUNCATE | UNION SELECT | -- | /* | xp_ | EXEC | information_schema
+  Blocked  → HTTP 403 + INSERT security_events (SQL_INJECTION)
+      │
+      ▼
+Proxy router
+  /lob/*        → hqt-lob:8001        (HTTP reverse proxy)
+  /analytics/*  → analytics_api router (same process, module2)
+  /graph/*      → graph_api router     (same process, module3)
+  /quantum/*    → quantum-engine:8004  (HTTP reverse proxy)
+  /admin/*      → admin router         (security_events + benchmark_runs queries)
+  /health       → upstream health checks
+  /metrics      → Prometheus generate_latest()
+```
