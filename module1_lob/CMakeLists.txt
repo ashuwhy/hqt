@@ -37,6 +37,7 @@ target_link_libraries(lob_server PRIVATE
     ${RDKAFKA_LIBRARIES}
     prometheus-cpp::core
     prometheus-cpp::pull
-    ashuwhy_lob_core
+    lob_core
+    lob_util
     pthread
 )
