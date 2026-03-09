@@ -18,5 +18,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y librdkafka1 librdkafka++1 curl siege \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/module1_lob/build/lob_server /usr/local/bin/lob_server
+COPY module1_lob/urls.txt /app/urls.txt
+COPY module1_lob/siege.conf /app/siege.conf
 EXPOSE 8001
-CMD ["lob_server"]
+CMD ["sh", "-c", "ulimit -n 65536 && lob_server"]

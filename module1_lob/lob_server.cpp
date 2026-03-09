@@ -1,8 +1,10 @@
 #include "crow.h"
 #include "lob/book_core.hpp"
 #include "lob/price_levels.hpp" // includes factory declarations appended above
+#include <array>
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <functional>
 #include <iostream>
 #include <librdkafka/rdkafkacpp.h>
@@ -13,6 +15,7 @@
 #include <prometheus/gauge.h>
 #include <prometheus/registry.h>
 #include <prometheus/text_serializer.h>
+#include <queue>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -22,11 +25,22 @@ using json = nlohmann::json;
 
 // ── Globals
 // ───────────────────────────────────────────────────────────────────
-std::mutex book_mutex;
+// Replace global book_mutex with 16 stripes
+std::array<std::mutex, 16> book_mutex_stripes;
+inline std::mutex &get_book_mutex(const std::string &sym) {
+  return book_mutex_stripes[std::hash<std::string>{}(sym) % 16];
+}
+
 std::unordered_map<std::string, std::unique_ptr<lob::BookCore>> books;
 std::unordered_map<std::string, std::unique_ptr<lob::IPriceLevels>> bids_levels;
 std::unordered_map<std::string, std::unique_ptr<lob::IPriceLevels>> asks_levels;
 std::unordered_map<std::string, std::unique_ptr<lob::IEventLogger>> loggers;
+
+// ── Async Kafka Logging ──────────────────────────────────────────────────
+std::mutex kafka_queue_mutex;
+std::condition_variable kafka_cv;
+std::queue<std::string> kafka_queue;
+bool kafka_running = true;
 
 // ── Prometheus
 // ────────────────────────────────────────────────────────────────
@@ -66,19 +80,17 @@ public:
     json t;
     t["ts"] = ts;
     t["symbol"] = sym_;
-    t["price"] = static_cast<double>(px);
-    t["qty"] = static_cast<double>(qty);
+    t["price"] = static_cast<double>(px) / 1e8;
+    t["qty"] = static_cast<double>(qty) / 1e8;
     t["liquidity_side"] = (liq_side == lob::Side::Bid) ? "Bid" : "Ask";
     t["passive_id"] = passive_id;
     t["taker_id"] = taker_id;
     std::string payload = t.dump();
-    if (producer && output_topic) {
-      producer->produce(output_topic, RdKafka::Topic::PARTITION_UA,
-                        RdKafka::Producer::RK_MSG_COPY,
-                        const_cast<char *>(payload.c_str()), payload.size(),
-                        nullptr, nullptr);
-      producer->poll(0);
+    {
+      std::lock_guard<std::mutex> lk(kafka_queue_mutex);
+      kafka_queue.push(std::move(payload));
     }
+    kafka_cv.notify_one();
     trade_fam.Add({{"symbol", sym_}}).Increment();
   }
 
@@ -130,7 +142,7 @@ void init_kafka() {
 void broadcast_depth(const std::string &sym) {
   std::string depth_json;
   {
-    std::lock_guard<std::mutex> lk(book_mutex);
+    std::lock_guard<std::mutex> lk(get_book_mutex(sym));
     if (books.find(sym) == books.end())
       return;
     auto *bk = get_book(sym);
@@ -170,22 +182,32 @@ int main() {
           if (sym.empty())
             return crow::response(400, R"({"error":"missing symbol"})");
 
+          std::string side_str = j.value("side", "");
+          if (side_str != "B" && side_str != "A")
+            return crow::response(
+                400, R"({"error":"invalid side: must be 'B' or 'A'"})");
+
+          double price = j.value("price", 0.0);
+          double qty = j.value("quantity", 0.0);
+          if (price <= 0 || qty <= 0)
+            return crow::response(
+                400, R"({"error":"price and quantity must be positive"})");
+
           lob::NewOrder o;
           static std::atomic<uint64_t> gid{1};
           o.id = gid++;
           o.user = 1;
           o.seq = o.id;
-          o.side =
-              (j.value("side", "B") == "B") ? lob::Side::Bid : lob::Side::Ask;
-          o.price = static_cast<lob::Tick>(j.value("price", 0.0) * 1e8);
-          o.qty = static_cast<lob::Quantity>(j.value("quantity", 0.0) * 1e8);
+          o.side = (side_str == "B") ? lob::Side::Bid : lob::Side::Ask;
+          o.price = static_cast<lob::Tick>(price * 1e8);
+          o.qty = static_cast<lob::Quantity>(qty * 1e8);
           o.ts = std::chrono::duration_cast<std::chrono::nanoseconds>(
                      std::chrono::system_clock::now().time_since_epoch())
                      .count();
           o.flags = 0;
 
           {
-            std::lock_guard<std::mutex> lk(book_mutex);
+            std::lock_guard<std::mutex> lk(get_book_mutex(sym));
             auto *bk = get_book(sym);
             if (j.value("order_type", "LIMIT") == "LIMIT")
               bk->submit_limit(o);
@@ -201,9 +223,9 @@ int main() {
         }
       });
 
-  CROW_ROUTE(app, "/lob/depth/<string>")
+  CROW_ROUTE(app, "/lob/depth/<path>")
   ([](const std::string &symbol) {
-    std::lock_guard<std::mutex> lk(book_mutex);
+    std::lock_guard<std::mutex> lk(get_book_mutex(symbol));
     auto *bk = get_book(symbol);
     auto bids_raw = bk->topN(lob::Side::Bid, 10);
     auto asks_raw = bk->topN(lob::Side::Ask, 10);
@@ -221,8 +243,12 @@ int main() {
 
   CROW_ROUTE(app, "/lob/health")
   ([]() {
-    std::lock_guard<std::mutex> lk(book_mutex);
     json syms = json::array();
+    // Health check needs to iterate all stripes or just be approximate.
+    // For simplicity, we'll just check existence.
+    for (int i = 0; i < 16; ++i) {
+      std::lock_guard<std::mutex> lk(book_mutex_stripes[i]);
+    }
     for (auto &[k, _] : books)
       syms.push_back(k);
     return crow::response(
@@ -238,7 +264,7 @@ int main() {
     return resp;
   });
 
-  CROW_WEBSOCKET_ROUTE(app, "/lob/stream/<string>")
+  CROW_WEBSOCKET_ROUTE(app, "/lob/stream/<path>")
       .onaccept([](const crow::request &req, void **userdata) -> bool {
         std::string url = req.url;
         *userdata = new std::string(url.substr(url.rfind('/') + 1));
@@ -262,6 +288,30 @@ int main() {
       .onmessage(
           [](crow::websocket::connection &, const std::string &, bool) {});
 
+  // ── Kafka Background Worker ─────────────────────────────────────────────
+  std::thread kafka_worker([]() {
+    while (kafka_running) {
+      std::string payload;
+      {
+        std::unique_lock<std::mutex> lk(kafka_queue_mutex);
+        kafka_cv.wait(lk,
+                      []() { return !kafka_queue.empty() || !kafka_running; });
+        if (!kafka_running && kafka_queue.empty())
+          break;
+        payload = std::move(kafka_queue.front());
+        kafka_queue.pop();
+      }
+      if (producer && output_topic) {
+        producer->produce(output_topic, RdKafka::Topic::PARTITION_UA,
+                          RdKafka::Producer::RK_MSG_COPY,
+                          const_cast<char *>(payload.c_str()), payload.size(),
+                          nullptr, nullptr);
+        producer->poll(0);
+      }
+    }
+  });
+  kafka_worker.detach();
+
   // ── Background Broadcast Thread ──────────────────────────────────────────
   std::thread broadcaster([&]() {
     while (true) {
@@ -281,6 +331,6 @@ int main() {
   });
   broadcaster.detach();
 
-  app.port(8001).multithreaded().run();
+  app.port(8001).concurrency(64).multithreaded().run();
   return 0;
 }

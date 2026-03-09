@@ -139,6 +139,10 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     healthcheck:
       test: [ "CMD-SHELL", "curl -f http://localhost:8001/lob/health || exit 1" ]
       interval: 5s
