@@ -44,9 +44,8 @@ auto &trade_fam = prometheus::BuildCounter()
 // ── Kafka async queue ────────────────────────────────────────────────────────
 RdKafka::Producer *producer = nullptr;
 RdKafka::Topic *output_topic = nullptr;
-std::mutex kafka_q_mu;
-std::condition_variable kafka_cv;
-std::queue<std::string> kafka_q;
+#include "blockingconcurrentqueue.h"
+moodycamel::BlockingConcurrentQueue<std::string> kafka_q;
 
 class KafkaLogger : public lob::IEventLogger {
 public:
@@ -61,11 +60,7 @@ public:
         ts, sym_.c_str(), static_cast<double>(px) / 1e8,
         static_cast<double>(qty) / 1e8, liq == lob::Side::Bid ? "Bid" : "Ask",
         pass, take);
-    {
-      std::lock_guard lk(kafka_q_mu);
-      kafka_q.emplace(buf, n);
-    }
-    kafka_cv.notify_one();
+    kafka_q.enqueue(std::string(buf, n));
     trade_fam.Add({{"symbol", sym_}}).Increment();
   }
   void log_new(const lob::NewOrder &, bool, lob::Tick,
@@ -116,17 +111,22 @@ int main() {
   std::thread([] {
     while (true) {
       std::string payload;
-      {
-        std::unique_lock lk(kafka_q_mu);
-        kafka_cv.wait(lk, [] { return !kafka_q.empty(); });
-        payload = std::move(kafka_q.front());
-        kafka_q.pop();
-      }
-      if (producer && output_topic)
+      kafka_q.wait_dequeue(payload);
+      if (producer && output_topic) {
         producer->produce(output_topic, RdKafka::Topic::PARTITION_UA,
                           RdKafka::Producer::RK_MSG_COPY, payload.data(),
                           payload.size(), nullptr, nullptr);
-      producer->poll(0);
+        producer->poll(0);
+      }
+
+      while (kafka_q.try_dequeue(payload)) {
+        if (producer && output_topic) {
+          producer->produce(output_topic, RdKafka::Topic::PARTITION_UA,
+                            RdKafka::Producer::RK_MSG_COPY, payload.data(),
+                            payload.size(), nullptr, nullptr);
+          producer->poll(0);
+        }
+      }
     }
   }).detach();
 
