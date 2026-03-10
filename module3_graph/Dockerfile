@@ -14,4 +14,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-CMD ["uvicorn", "module2_timescale.analytics_api:app", "--host", "0.0.0.0", "--port", "8002"]
+CMD ["uvicorn", "module3_graph.graph_api:app", "--host", "0.0.0.0", "--port", "8003"]

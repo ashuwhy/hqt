@@ -132,8 +132,8 @@ services:
     hostname: lob-engine
     env_file:
       - .env
-    ports:
-      - "8001:8001"
+    expose:
+      - "8001"
     depends_on:
       kafka:
         condition: service_healthy
@@ -157,11 +157,39 @@ services:
     hostname: data-ingestor
     env_file:
       - .env
+    ports:
+      - "8002:8002"
     depends_on:
       kafka:
         condition: service_healthy
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8002/health || exit 1" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  graph-service:
+    build:
+      context: .
+      dockerfile: module3_graph/Dockerfile
+    container_name: hqt-graph
+    hostname: graph-service
+    env_file:
+      - .env
+    expose:
+      - "8003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      lob-engine:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8003/health || exit 1" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   quantum-engine:
     build:
@@ -171,8 +199,8 @@ services:
     hostname: quantum-engine
     env_file:
       - .env
-    ports:
-      - "8004:8004"
+    expose:
+      - "8004"
     depends_on:
       postgres:
         condition: service_healthy
@@ -200,7 +228,7 @@ services:
       lob-engine:
         condition: service_healthy
       quantum-engine:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       test: [ "CMD-SHELL", "curl -f http://localhost:8000/health || exit 1" ]
       interval: 5s
@@ -223,7 +251,7 @@ services:
     ports:
       - "9121:9121"
     environment:
-      REDIS_ADDR: redis://redis:6379
+      REDIS_ADDR: redis:6379
 
   node-exporter:
     image: prom/node-exporter:latest
