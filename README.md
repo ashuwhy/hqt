@@ -9,6 +9,18 @@ CS39006 DBMS Lab project: high-QPS LOB, TimescaleDB, Apache AGE, Qiskit arbitrag
 
 ### One-time setup
 
+When cloning the repository, you **must** include the submodules for the LOB engine components:
+
+```bash
+git clone --recursive https://github.com/ashuwhy/lob.git
+```
+
+If you have already cloned the repository without submodules, run:
+
+```bash
+git submodule update --init --recursive
+```
+
 Setting up the development environment requires installing linting and formatting tools. We use `ruff` for code formatting and standard checks, and `pre-commit` to automatically run these checks on every commit.
 
 ```bash
