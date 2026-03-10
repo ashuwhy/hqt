@@ -4,14 +4,28 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_BUILD_TYPE Release)
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(RDKAFKA REQUIRED rdkafka rdkafka++)
+pkg_check_modules(RDKAFKA REQUIRED rdkafka)
+
+if(APPLE)
+    # find_library chokes on '++' — get brew prefix and link directly
+    execute_process(
+        COMMAND brew --prefix librdkafka
+        OUTPUT_VARIABLE RDKAFKA_BREW_PREFIX
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    list(APPEND RDKAFKA_LIBRARIES "-L${RDKAFKA_BREW_PREFIX}/lib" "-lrdkafka++")
+else()
+    pkg_check_modules(RDKAFKAXX REQUIRED rdkafka++)
+    list(APPEND RDKAFKA_LIBRARIES ${RDKAFKAXX_LIBRARIES})
+endif()
+
 
 include(FetchContent)
 
 # simdjson — replaces nlohmann, ~20x faster
 FetchContent_Declare(simdjson
     GIT_REPOSITORY https://github.com/simdjson/simdjson.git
-    GIT_TAG v3.9.2
+    GIT_TAG v3.6.4
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(simdjson)

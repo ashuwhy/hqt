@@ -12,7 +12,7 @@
 #include <prometheus/registry.h>
 #include <prometheus/text_serializer.h>
 #include <queue>
-#include <simdjson.h>
+#include <simdjson/ondemand.h>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -57,7 +57,7 @@ public:
     char buf[256];
     int n = snprintf(
         buf, sizeof(buf),
-        R"({"ts":%ld,"symbol":"%s","price":%.8f,"qty":%.8f,"liquidity_side":"%s","passive_id":%lu,"taker_id":%lu})",
+        R"({"ts":%lld,"symbol":"%s","price":%.8f,"qty":%.8f,"liquidity_side":"%s","passive_id":%llu,"taker_id":%llu})",
         ts, sym_.c_str(), static_cast<double>(px) / 1e8,
         static_cast<double>(qty) / 1e8, liq == lob::Side::Bid ? "Bid" : "Ask",
         pass, take);
