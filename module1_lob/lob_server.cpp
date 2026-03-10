@@ -13,6 +13,7 @@
 #include <prometheus/text_serializer.h>
 #include <queue>
 #include <simdjson/ondemand.h>
+#include <simdjson/padded_string-inl.h>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>

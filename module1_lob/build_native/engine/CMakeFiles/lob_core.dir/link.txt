@@ -1,2 +1,0 @@
-/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ar qc liblob_core.a CMakeFiles/lob_core.dir/src/book_core.cpp.o CMakeFiles/lob_core.dir/src/price_levels.cpp.o
-/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib liblob_core.a

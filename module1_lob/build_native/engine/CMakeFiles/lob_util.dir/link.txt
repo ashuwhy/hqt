@@ -1,2 +1,0 @@
-/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ar qc liblob_util.a CMakeFiles/lob_util.dir/src/util.cpp.o CMakeFiles/lob_util.dir/src/logging.cpp.o CMakeFiles/lob_util.dir/src/taq_writer.cpp.o
-/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib liblob_util.a
