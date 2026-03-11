@@ -251,7 +251,7 @@ services:
     ports:
       - "9121:9121"
     environment:
-      REDIS_ADDR: redis:6379
+      REDIS_ADDR: redis://redis:6379
 
   node-exporter:
     image: prom/node-exporter:latest
