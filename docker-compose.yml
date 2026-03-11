@@ -132,8 +132,8 @@ services:
     hostname: lob-engine
     env_file:
       - .env
-    expose:
-      - "8001"
+    ports:
+      - "8001:8001"
     depends_on:
       kafka:
         condition: service_healthy
@@ -178,8 +178,8 @@ services:
     hostname: graph-service
     env_file:
       - .env
-    expose:
-      - "8003"
+    ports:
+      - "8003:8003"
     depends_on:
       postgres:
         condition: service_healthy
@@ -199,8 +199,8 @@ services:
     hostname: quantum-engine
     env_file:
       - .env
-    expose:
-      - "8004"
+    ports:
+      - "8004:8004"
     depends_on:
       postgres:
         condition: service_healthy
