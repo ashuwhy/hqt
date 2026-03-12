@@ -85,63 +85,70 @@ async def stream_trades(symbols: list[str], duration_sec: int) -> None:
         logger.error("No valid Kraken symbols to subscribe to")
         return
 
-    logger.info("Connecting to Kraken WebSocket for %s (duration=%ds)...", kraken_symbols, duration_sec)
+    logger.info("Connecting to Kraken WebSocket for %s (duration=%ss)...", kraken_symbols, duration_sec if duration_sec > 0 else "infinite")
 
-    async with websockets.connect(KRAKEN_WS_URL) as ws:
-        # Subscribe to trade channel
-        subscribe_msg = {
-            "method": "subscribe",
-            "params": {
-                "channel": "trade",
-                "symbol": kraken_symbols,
-            }
-        }
-        await ws.send(json.dumps(subscribe_msg))
-        logger.info("Subscribed to trade channel for %s", kraken_symbols)
-
+    while True:
+        if duration_sec > 0 and (time.monotonic() - start_time) >= duration_sec:
+            break
+            
         try:
-            while (time.monotonic() - start_time) < duration_sec:
-                try:
-                    raw = await asyncio.wait_for(ws.recv(), timeout=5.0)
-                except asyncio.TimeoutError:
-                    continue
+            async with websockets.connect(KRAKEN_WS_URL) as ws:
+                subscribe_msg = {
+                    "method": "subscribe",
+                    "params": {
+                        "channel": "trade",
+                        "symbol": kraken_symbols,
+                    }
+                }
+                await ws.send(json.dumps(subscribe_msg))
+                logger.info("Subscribed to trade channel for %s", kraken_symbols)
 
-                msg = json.loads(raw)
+                while True:
+                    if duration_sec > 0 and (time.monotonic() - start_time) >= duration_sec:
+                        break
 
-                # Skip heartbeats and subscription confirmations
-                if msg.get("channel") != "trade":
-                    continue
-
-                for trade in msg.get("data", []):
-                    symbol = trade.get("symbol", "")
-                    price = float(trade.get("price", 0))
-                    qty = float(trade.get("qty", 0))
-                    side = trade.get("side", "b")
-                    ts_str = trade.get("timestamp", "")
-
-                    # Parse Kraken's ISO timestamp to epoch nanoseconds
                     try:
-                        dt = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
-                        ts_ns = int(dt.timestamp() * 1e9)
-                    except (ValueError, AttributeError):
-                        ts_ns = int(time.time() * 1e9)
+                        raw = await asyncio.wait_for(ws.recv(), timeout=5.0)
+                    except asyncio.TimeoutError:
+                        continue
 
-                    trade_count += 1
+                    msg = json.loads(raw)
 
-                    # Convert to LOB-compatible format
-                    payload = _make_lob_format(symbol, price, qty, side, ts_ns, trade_count)
-                    producer.produce("executed_trades", value=payload.encode())
+                    # Skip heartbeats and subscription confirmations
+                    if msg.get("channel") != "trade":
+                        continue
 
-                    if trade_count % 100 == 0:
-                        producer.flush()
-                        elapsed = time.monotonic() - start_time
-                        logger.info(
-                            "Streamed %d real trades (%.0fs elapsed, %.1f trades/s)",
-                            trade_count, elapsed, trade_count / elapsed,
-                        )
+                    # Parse message
+                    for trade in msg.get("data", []):
+                        symbol = trade.get("symbol", "")
+                        price = float(trade.get("price", 0))
+                        qty = float(trade.get("qty", 0))
+                        side = trade.get("side", "b")
+                        ts_str = trade.get("timestamp", "")
 
+                        try:
+                            dt = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
+                            ts_ns = int(dt.timestamp() * 1e9)
+                        except (ValueError, AttributeError):
+                            ts_ns = int(time.time() * 1e9)
+
+                        trade_count += 1
+                        payload = _make_lob_format(symbol, price, qty, side, ts_ns, trade_count)
+                        producer.produce("executed_trades", value=payload.encode())
+
+                        if trade_count % 100 == 0:
+                            producer.flush()
+                            elapsed = time.monotonic() - start_time
+                            logger.info(
+                                "Streamed %d real trades (%.0fs elapsed, %.1f trades/s)",
+                                trade_count, elapsed, trade_count / max(elapsed, 0.001),
+                            )
         except asyncio.CancelledError:
-            pass
+            break
+        except Exception as exc:
+            logger.warning("WebSocket error: %s. Reconnecting in 5s...", exc)
+            await asyncio.sleep(5)
+
 
     producer.flush()
     elapsed = time.monotonic() - start_time

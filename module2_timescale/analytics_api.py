@@ -24,6 +24,7 @@ import psycopg
 from psycopg.rows import dict_row
 
 from module2_timescale.kafka_consumer import run_consumer
+from module2_timescale.live_streamer import stream_trades
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 logger = logging.getLogger("analytics_api")
@@ -46,11 +47,12 @@ INTERVAL_MAP = {
 
 # ── Lifespan ─────────────────────────────────────────────────────────────────
 consumer_task: asyncio.Task | None = None
+streamer_task: asyncio.Task | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global consumer_task
+    global consumer_task, streamer_task
     # Load SQL indicator functions on startup
     try:
         conn = psycopg.connect(PG_DSN)
@@ -82,12 +84,29 @@ async def lifespan(app: FastAPI):
     # Start Kafka consumer background task
     consumer_task = asyncio.create_task(run_consumer())
     logger.info("Kafka consumer background task started")
+    
+    # Start live streamer background task (duration 0 = infinite)
+    pairs = [
+        "BTC/USD", "ETH/USD", "SOL/USD", "XRP/USD", 
+        "ADA/USD", "DOT/USD", "DOGE/USD", "AVAX/USD", "MATIC/USD"
+    ]
+    streamer_task = asyncio.create_task(stream_trades(pairs, 0))
+    logger.info("Kraken live streamer background task started for %d pairs", len(pairs))
+    
     yield
+    
     # Shutdown
     if consumer_task:
         consumer_task.cancel()
         try:
             await consumer_task
+        except asyncio.CancelledError:
+            pass
+            
+    if streamer_task:
+        streamer_task.cancel()
+        try:
+            await streamer_task
         except asyncio.CancelledError:
             pass
 
