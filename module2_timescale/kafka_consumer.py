@@ -10,6 +10,7 @@ import io
 import json
 import logging
 import os
+import time
 import uuid
 from datetime import datetime, timezone
 
@@ -79,6 +80,8 @@ def _bulk_insert(conn: psycopg.Connection, rows: list[dict]) -> int:
     """Binary COPY rows into raw_ticks. Returns count inserted."""
     if not rows:
         return 0
+    
+    start_time = time.monotonic()
     with conn.cursor() as cur:
         with cur.copy(
             "COPY raw_ticks (ts, symbol, price, volume, side, order_id, trade_id) "
@@ -95,6 +98,11 @@ def _bulk_insert(conn: psycopg.Connection, rows: list[dict]) -> int:
                     r["trade_id"],
                 ))
     conn.commit()
+    elapsed = time.monotonic() - start_time
+    logger.info(
+        "Inserted batch of %d rows in %.3fs (%.1f rows/s)",
+        len(rows), elapsed, len(rows) / max(elapsed, 0.001)
+    )
     return len(rows)
 
 
@@ -119,16 +127,42 @@ async def run_consumer() -> None:
     """Main consumer loop — runs forever as a background asyncio task."""
     logger.info("Starting Kafka consumer on topic=%s group=%s", TOPIC, GROUP_ID)
 
-    consumer = Consumer({
-        "bootstrap.servers": KAFKA_BOOTSTRAP,
-        "group.id": GROUP_ID,
-        "auto.offset.reset": "earliest",
-        "enable.auto.commit": True,
-    })
-    consumer.subscribe([TOPIC])
+    # ── Retry loop for Kafka connection ──────────────────────────────────────
+    consumer = None
+    retry_count = 0
+    while True:
+        try:
+            consumer = Consumer({
+                "bootstrap.servers": KAFKA_BOOTSTRAP,
+                "group.id": GROUP_ID,
+                "auto.offset.reset": "earliest",
+                "enable.auto.commit": True,
+            })
+            # Test connection with list_topics
+            consumer.list_topics(timeout=5.0)
+            break
+        except Exception as exc:
+            retry_count += 1
+            logger.warning("Kafka not ready (retry %d): %s. Retrying in 5s...", retry_count, exc)
+            if consumer:
+                consumer.close()
+            await asyncio.sleep(5)
 
-    conn = psycopg.connect(PG_DSN, autocommit=False)
-    _verify_hypertable(conn)
+    consumer.subscribe([TOPIC])
+    assert consumer is not None
+
+    # ── Retry loop for DB connection ─────────────────────────────────────────
+    conn = None
+    while True:
+        try:
+            conn = psycopg.connect(PG_DSN, autocommit=False)
+            _verify_hypertable(conn)
+            break
+        except Exception as exc:
+            logger.warning("DB not ready: %s. Retrying in 5s...", exc)
+            await asyncio.sleep(5)
+    
+    assert conn is not None
 
     batch: list[dict] = []
 

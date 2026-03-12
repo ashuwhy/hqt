@@ -143,10 +143,11 @@ async def stream_trades(symbols: list[str], duration_sec: int) -> None:
                                 "Streamed %d real trades (%.0fs elapsed, %.1f trades/s)",
                                 trade_count, elapsed, trade_count / max(elapsed, 0.001),
                             )
-        except asyncio.CancelledError:
+        except (asyncio.CancelledError, KeyboardInterrupt):
             break
         except Exception as exc:
-            logger.warning("WebSocket error: %s. Reconnecting in 5s...", exc)
+            # Handle variety of errors: ConnectionResetError, gaierror (DNS), TimeoutError, etc.
+            logger.warning("WebSocket stream error: %s (%s). Reconnecting in 5s...", type(exc).__name__, exc)
             await asyncio.sleep(5)
 
 

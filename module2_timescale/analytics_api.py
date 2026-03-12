@@ -25,6 +25,7 @@ from psycopg.rows import dict_row
 
 from module2_timescale.kafka_consumer import run_consumer
 from module2_timescale.live_streamer import stream_trades
+from module2_timescale.smart_backfiller import run_backfiller, backfiller_state
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 logger = logging.getLogger("analytics_api")
@@ -48,11 +49,12 @@ INTERVAL_MAP = {
 # ── Lifespan ─────────────────────────────────────────────────────────────────
 consumer_task: asyncio.Task | None = None
 streamer_task: asyncio.Task | None = None
+backfiller_task: asyncio.Task | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global consumer_task, streamer_task
+    global consumer_task, streamer_task, backfiller_task
     # Load SQL indicator functions on startup
     try:
         conn = psycopg.connect(PG_DSN)
@@ -93,6 +95,10 @@ async def lifespan(app: FastAPI):
     streamer_task = asyncio.create_task(stream_trades(pairs, 0))
     logger.info("Kraken live streamer background task started for %d pairs", len(pairs))
     
+    # Start smart backfiller background task
+    backfiller_task = asyncio.create_task(run_backfiller())
+    logger.info("Smart backfiller background task started")
+    
     yield
     
     # Shutdown
@@ -107,6 +113,13 @@ async def lifespan(app: FastAPI):
         streamer_task.cancel()
         try:
             await streamer_task
+        except asyncio.CancelledError:
+            pass
+            
+    if backfiller_task:
+        backfiller_task.cancel()
+        try:
+            await backfiller_task
         except asyncio.CancelledError:
             pass
 
@@ -142,15 +155,60 @@ def _get_conn():
 @app.get("/health")
 @app.get("/analytics/health")
 async def health():
+    global consumer_task, streamer_task, backfiller_task
+    
+    health_data = {
+        "status": "ok",
+        "module": "timescale_analytics",
+        "consumer_status": "stopped",
+        "streamer_status": "stopped",
+        "backfiller_status": "stopped",
+        "backfiller_stats": backfiller_state,
+        "row_count": 0
+    }
+
+    if consumer_task:
+        if consumer_task.done():
+            if consumer_task.exception():
+                health_data["consumer_status"] = f"crashed: {consumer_task.exception()}"
+                health_data["status"] = "degraded"
+            else:
+                health_data["consumer_status"] = "finished"
+        else:
+            health_data["consumer_status"] = "running"
+            
+    if streamer_task:
+        if streamer_task.done():
+            if streamer_task.exception():
+                health_data["streamer_status"] = f"crashed: {streamer_task.exception()}"
+                health_data["status"] = "degraded"
+            else:
+                health_data["streamer_status"] = "finished"
+        else:
+            health_data["streamer_status"] = "running"
+
+    if backfiller_task:
+        if backfiller_task.done():
+            if backfiller_task.exception():
+                health_data["backfiller_status"] = f"crashed: {backfiller_task.exception()}"
+                health_data["status"] = "degraded"
+            else:
+                health_data["backfiller_status"] = "finished"
+        else:
+            health_data["backfiller_status"] = "running"
+
     try:
         conn = _get_conn()
         with conn.cursor() as cur:
             cur.execute("SELECT count(*) AS cnt FROM raw_ticks")
             row_count = cur.fetchone()["cnt"]
         conn.close()
-        return {"status": "ok", "module": "timescale_analytics", "row_count": row_count}
+        health_data["row_count"] = row_count
     except Exception as exc:
-        return {"status": "degraded", "error": str(exc), "row_count": 0}
+        health_data["status"] = "degraded"
+        health_data["error"] = str(exc)
+        
+    return health_data
 
 
 # ── GET /analytics/ticks ─────────────────────────────────────────────────────
