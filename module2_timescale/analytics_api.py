@@ -11,6 +11,7 @@ Endpoints:
 import asyncio
 import logging
 import os
+
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Optional
@@ -59,9 +60,24 @@ async def lifespan(app: FastAPI):
                 conn.execute(f.read())
             conn.commit()
             logger.info("SQL indicator functions loaded")
+
+        # ── Verify real data is present ──────────────────────────────────────
+        with conn.cursor() as cur:
+            cur.execute("SELECT count(*) FROM raw_ticks")
+            row_count = cur.fetchone()[0]
+
+        if row_count < 1000:
+            logger.warning(
+                "raw_ticks has only %d rows — real data may not be loaded. "
+                "Triggering fetch_real_data in background...", row_count
+            )
+            asyncio.create_task(_auto_fetch_real_data())
+        else:
+            logger.info("raw_ticks verified: %d real rows loaded", row_count)
+
         conn.close()
     except Exception as exc:
-        logger.warning("Could not load indicator functions: %s", exc)
+        logger.warning("Startup check failed: %s", exc)
 
     # Start Kafka consumer background task
     consumer_task = asyncio.create_task(run_consumer())
@@ -74,6 +90,26 @@ async def lifespan(app: FastAPI):
             await consumer_task
         except asyncio.CancelledError:
             pass
+
+
+async def _auto_fetch_real_data() -> None:
+    """Run fetch_real_data.py as a subprocess to populate raw_ticks with real Kraken data."""
+    logger.info("Auto-fetching real Kraken data...")
+    try:
+        env = os.environ.copy()
+        proc = await asyncio.create_subprocess_exec(
+            "python", "-u", "-m", "module2_timescale.fetch_real_data",
+            env=env,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+        )
+        stdout, _ = await proc.communicate()
+        if proc.returncode == 0:
+            logger.info("Real data fetch complete.\n%s", stdout.decode())
+        else:
+            logger.error("fetch_real_data failed (rc=%d):\n%s", proc.returncode, stdout.decode())
+    except Exception as exc:
+        logger.error("Auto-fetch error: %s", exc)
 
 
 app = FastAPI(title="HQT Timescale Analytics API", lifespan=lifespan)
@@ -180,11 +216,11 @@ async def get_ohlcv(
             result.append({
                 "bucket": r["bucket"].isoformat() if r["bucket"] else None,
                 "symbol": r["symbol"],
-                "open": float(r["open"]) if r["open"] else None,
-                "high": float(r["high"]) if r["high"] else None,
-                "low": float(r["low"]) if r["low"] else None,
-                "close": float(r["close"]) if r["close"] else None,
-                "volume": float(r["volume"]) if r["volume"] else None,
+                "open": float(r["open"]) if r["open"] is not None else None,
+                "high": float(r["high"]) if r["high"] is not None else None,
+                "low": float(r["low"]) if r["low"] is not None else None,
+                "close": float(r["close"]) if r["close"] is not None else None,
+                "volume": float(r["volume"]) if r["volume"] is not None else None,
             })
         return result
     finally:
@@ -239,6 +275,18 @@ async def get_indicators(
                 )
     finally:
         conn.close()
+
+
+# ── POST /analytics/refresh ──────────────────────────────────────────────────
+@app.post("/analytics/refresh")
+async def trigger_refresh():
+    """
+    Trigger a background reload of real Kraken trade data into raw_ticks.
+    Wipes existing rows and fetches the last 3 days fresh from Kraken REST API.
+    Returns immediately; fetch runs in background.
+    """
+    asyncio.create_task(_auto_fetch_real_data())
+    return {"status": "refresh_started", "message": "Fetching 3 days of real Kraken trades in background"}
 
 
 # ── GET /metrics ─────────────────────────────────────────────────────────────
