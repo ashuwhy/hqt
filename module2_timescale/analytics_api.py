@@ -1,8 +1,247 @@
-from fastapi import FastAPI
+"""
+HQT TimescaleDB Analytics REST API.
 
-app = FastAPI(title="HQT Timescale Analytics API")
+Endpoints:
+    GET /health, /analytics/health
+    GET /analytics/ticks
+    GET /analytics/ohlcv
+    GET /analytics/indicators
+"""
 
+import asyncio
+import logging
+import os
+from contextlib import asynccontextmanager
+from datetime import datetime, timezone
+from typing import Optional
+
+from fastapi import FastAPI, HTTPException, Query
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+from starlette.responses import Response
+
+import psycopg
+from psycopg.rows import dict_row
+
+from module2_timescale.kafka_consumer import run_consumer
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
+logger = logging.getLogger("analytics_api")
+
+# ── Database ─────────────────────────────────────────────────────────────────
+PG_DSN = (
+    f"postgresql://{os.getenv('POSTGRES_USER', 'hqt')}"
+    f":{os.getenv('POSTGRES_PASSWORD', 'hqt_secret')}"
+    f"@{os.getenv('POSTGRES_HOST', 'postgres')}"
+    f":5432/{os.getenv('POSTGRES_DB', 'hqt')}"
+)
+
+# Interval name → continuous aggregate view
+INTERVAL_MAP = {
+    "1m":  "ohlcv_1m",
+    "5m":  "ohlcv_5m",
+    "15m": "ohlcv_15m",
+    "1h":  "ohlcv_1h",
+}
+
+# ── Lifespan ─────────────────────────────────────────────────────────────────
+consumer_task: asyncio.Task | None = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global consumer_task
+    # Load SQL indicator functions on startup
+    try:
+        conn = psycopg.connect(PG_DSN)
+        indicators_path = os.path.join(os.path.dirname(__file__), "indicators.sql")
+        if os.path.exists(indicators_path):
+            with open(indicators_path) as f:
+                conn.execute(f.read())
+            conn.commit()
+            logger.info("SQL indicator functions loaded")
+        conn.close()
+    except Exception as exc:
+        logger.warning("Could not load indicator functions: %s", exc)
+
+    # Start Kafka consumer background task
+    consumer_task = asyncio.create_task(run_consumer())
+    logger.info("Kafka consumer background task started")
+    yield
+    # Shutdown
+    if consumer_task:
+        consumer_task.cancel()
+        try:
+            await consumer_task
+        except asyncio.CancelledError:
+            pass
+
+
+app = FastAPI(title="HQT Timescale Analytics API", lifespan=lifespan)
+
+
+def _get_conn():
+    return psycopg.connect(PG_DSN, row_factory=dict_row)
+
+
+# ── Health ───────────────────────────────────────────────────────────────────
 @app.get("/health")
 @app.get("/analytics/health")
 async def health():
-    return {"status": "ok", "module": "timescale_analytics"}
+    try:
+        conn = _get_conn()
+        with conn.cursor() as cur:
+            cur.execute("SELECT count(*) AS cnt FROM raw_ticks")
+            row_count = cur.fetchone()["cnt"]
+        conn.close()
+        return {"status": "ok", "module": "timescale_analytics", "row_count": row_count}
+    except Exception as exc:
+        return {"status": "degraded", "error": str(exc), "row_count": 0}
+
+
+# ── GET /analytics/ticks ─────────────────────────────────────────────────────
+@app.get("/analytics/ticks")
+async def get_ticks(
+    symbol: str = Query(..., description="Symbol, e.g. BTC/USD"),
+    from_ts: Optional[str] = Query(None, alias="from", description="ISO 8601 start"),
+    to_ts: Optional[str] = Query(None, alias="to", description="ISO 8601 end"),
+    limit: int = Query(1000, ge=1, le=10000),
+):
+    conn = _get_conn()
+    try:
+        query = "SELECT ts, symbol, price, volume, side, order_id, trade_id FROM raw_ticks WHERE symbol = %s"
+        params: list = [symbol]
+
+        if from_ts:
+            query += " AND ts >= %s"
+            params.append(from_ts)
+        if to_ts:
+            query += " AND ts < %s"
+            params.append(to_ts)
+
+        query += " ORDER BY ts DESC LIMIT %s"
+        params.append(limit)
+
+        with conn.cursor() as cur:
+            cur.execute(query, params)
+            rows = cur.fetchall()
+
+        # Serialize UUIDs and timestamps
+        result = []
+        for r in rows:
+            result.append({
+                "ts": r["ts"].isoformat() if r["ts"] else None,
+                "symbol": r["symbol"],
+                "price": float(r["price"]),
+                "volume": float(r["volume"]),
+                "side": r["side"],
+                "order_id": str(r["order_id"]),
+                "trade_id": str(r["trade_id"]),
+            })
+        return result
+    finally:
+        conn.close()
+
+
+# ── GET /analytics/ohlcv ─────────────────────────────────────────────────────
+@app.get("/analytics/ohlcv")
+async def get_ohlcv(
+    symbol: str = Query(..., description="Symbol, e.g. BTC/USD"),
+    interval: str = Query("1m", description="1m, 5m, 15m, or 1h"),
+    from_ts: Optional[str] = Query(None, alias="from"),
+    to_ts: Optional[str] = Query(None, alias="to"),
+    limit: int = Query(500, ge=1, le=5000),
+):
+    view = INTERVAL_MAP.get(interval)
+    if not view:
+        raise HTTPException(status_code=400, detail=f"Invalid interval '{interval}'. Use: 1m, 5m, 15m, 1h")
+
+    conn = _get_conn()
+    try:
+        # Use format for view name (safe — controlled values only)
+        query = f"SELECT bucket, symbol, open, high, low, close, volume FROM {view} WHERE symbol = %s"
+        params: list = [symbol]
+
+        if from_ts:
+            query += " AND bucket >= %s"
+            params.append(from_ts)
+        if to_ts:
+            query += " AND bucket < %s"
+            params.append(to_ts)
+
+        query += " ORDER BY bucket DESC LIMIT %s"
+        params.append(limit)
+
+        with conn.cursor() as cur:
+            cur.execute(query, params)
+            rows = cur.fetchall()
+
+        result = []
+        for r in rows:
+            result.append({
+                "bucket": r["bucket"].isoformat() if r["bucket"] else None,
+                "symbol": r["symbol"],
+                "open": float(r["open"]) if r["open"] else None,
+                "high": float(r["high"]) if r["high"] else None,
+                "low": float(r["low"]) if r["low"] else None,
+                "close": float(r["close"]) if r["close"] else None,
+                "volume": float(r["volume"]) if r["volume"] else None,
+            })
+        return result
+    finally:
+        conn.close()
+
+
+# ── GET /analytics/indicators ────────────────────────────────────────────────
+@app.get("/analytics/indicators")
+async def get_indicators(
+    symbol: str = Query(..., description="Symbol, e.g. BTC/USD"),
+    indicator: str = Query(..., description="vwap, sma20, bollinger, or rsi"),
+    from_ts: Optional[str] = Query(None, alias="from"),
+    to_ts: Optional[str] = Query(None, alias="to"),
+):
+    conn = _get_conn()
+    try:
+        now_ts = datetime.now(timezone.utc).isoformat()
+        p_from = from_ts or "2000-01-01T00:00:00Z"
+        p_to = to_ts or now_ts
+
+        with conn.cursor() as cur:
+            if indicator == "vwap":
+                cur.execute("SELECT fn_vwap(%s, %s, %s) AS value", (symbol, p_from, p_to))
+                row = cur.fetchone()
+                return {"indicator": "vwap", "symbol": symbol, "value": float(row["value"]) if row["value"] else None}
+
+            elif indicator == "sma20":
+                cur.execute("SELECT fn_sma20(%s, %s) AS value", (symbol, p_to))
+                row = cur.fetchone()
+                return {"indicator": "sma20", "symbol": symbol, "value": float(row["value"]) if row["value"] else None}
+
+            elif indicator == "bollinger":
+                cur.execute("SELECT * FROM fn_bollinger(%s, %s)", (symbol, p_to))
+                row = cur.fetchone()
+                return {
+                    "indicator": "bollinger",
+                    "symbol": symbol,
+                    "sma20": float(row["sma20"]) if row and row["sma20"] else None,
+                    "upper": float(row["upper"]) if row and row["upper"] else None,
+                    "lower": float(row["lower"]) if row and row["lower"] else None,
+                }
+
+            elif indicator == "rsi":
+                cur.execute("SELECT fn_rsi14(%s, %s) AS value", (symbol, p_to))
+                row = cur.fetchone()
+                return {"indicator": "rsi14", "symbol": symbol, "value": float(row["value"]) if row["value"] else None}
+
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Unknown indicator '{indicator}'. Use: vwap, sma20, bollinger, rsi",
+                )
+    finally:
+        conn.close()
+
+
+# ── GET /metrics ─────────────────────────────────────────────────────────────
+@app.get("/metrics")
+async def metrics():
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)

@@ -4,9 +4,6 @@
 CREATE EXTENSION IF NOT EXISTS timescaledb;
 CREATE EXTENSION IF NOT EXISTS age;
 
--- Ensure Apache AGE is in the search path
-SET search_path = ag_catalog, public;
-
 -- 1. TimescaleDB Tables
 CREATE TABLE IF NOT EXISTS raw_ticks (
     ts          TIMESTAMPTZ        NOT NULL,
