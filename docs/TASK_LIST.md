@@ -59,54 +59,54 @@ Instead of the Python Tier 3 optimizations, we are pivoting to a full C++ networ
 ### File: `module2_timescale/Dockerfile`
 
 - [x] Placeholder exists (`FROM python:3.12-slim`)
-- [ ] **[M2-DOCKER]** Replace placeholder: install `libpq-dev librdkafka-dev`, copy `requirements.txt`, `pip install`, copy module, `CMD uvicorn module2_timescale.analytics_api:app --host 0.0.0.0 --port 8002`
-- [ ] **[M2-DOCKER]** Add `module2_timescale` service to `docker-compose.yml` with `port 8002:8002` and `depends_on: [kafka, postgres]`
+- [x] **[M2-DOCKER]** Replace placeholder: install `libpq-dev librdkafka-dev`, copy `requirements.txt`, `pip install`, copy module, `CMD uvicorn module2_timescale.analytics_api:app --host 0.0.0.0 --port 8002`
+- [x] **[M2-DOCKER]** Add `module2_timescale` service to `docker-compose.yml` with `port 8002:8002` and `depends_on: [kafka, postgres]`
 
 ### File: `module2_timescale/kafka_consumer.py`
 
-- [ ] **[M2-KAFKA]** `confluent_kafka.Consumer` on `executed_trades` topic, `group_id = 'timescale_ingestor'`
-- [ ] **[M2-KAFKA]** Batch 1,000 records OR 100ms timeout → `psycopg3` binary `COPY raw_ticks (ts, symbol, price, volume, side, order_id, trade_id) FROM STDIN`
-- [ ] **[M2-KAFKA]** Malformed JSON messages: log warning, skip record, do NOT crash consumer loop
-- [ ] **[M2-KAFKA]** On startup: verify `raw_ticks` hypertable exists, log current chunk count
-- [ ] **[M2-KAFKA]** Prometheus counter: `timescale_rows_inserted_total`
-- [ ] **[M2-KAFKA]** Acceptance: 10,000 rows in DB within 200ms of being published to Kafka
+- [x] **[M2-KAFKA]** `confluent_kafka.Consumer` on `executed_trades` topic, `group_id = 'timescale_ingestor'`
+- [x] **[M2-KAFKA]** Batch 1,000 records OR 100ms timeout → `psycopg3` binary `COPY raw_ticks (ts, symbol, price, volume, side, order_id, trade_id) FROM STDIN`
+- [x] **[M2-KAFKA]** Malformed JSON messages: log warning, skip record, do NOT crash consumer loop
+- [x] **[M2-KAFKA]** On startup: verify `raw_ticks` hypertable exists, log current chunk count
+- [x] **[M2-KAFKA]** Prometheus counter: `timescale_rows_inserted_total`
+- [x] **[M2-KAFKA]** Acceptance: 10,000 rows in DB within 200ms of being published to Kafka
 
 ### File: `module2_timescale/gen_ticks.py`
 
-- [ ] **[M2-GEN]** CLI args: `--rows 1000000 --symbols BTC/USD,ETH/USD --batch-size 5000`
-- [ ] **[M2-GEN]** GBM price series: `dS = S * (μ dt + σ dW)`, μ=0, σ=0.02, dt=1s
-- [ ] **[M2-GEN]** Side B/S with 50% probability; volume `Uniform(0.01, 10.0)`
-- [ ] **[M2-GEN]** Bulk insert via `psycopg3` binary COPY; target ≥ 500k rows/min
-- [ ] **[M2-GEN]** Acceptance: `SELECT count(*) FROM raw_ticks` = target row count ± 0.1%
+- [x] **[M2-GEN]** CLI args: `--rows 1000000 --symbols BTC/USD,ETH/USD --batch-size 5000`
+- [x] **[M2-GEN]** GBM price series: `dS = S * (μ dt + σ dW)`, μ=0, σ=0.02, dt=1s
+- [x] **[M2-GEN]** Side B/S with 50% probability; volume `Uniform(0.01, 10.0)`
+- [x] **[M2-GEN]** Bulk insert via `psycopg3` binary COPY; target ≥ 500k rows/min
+- [x] **[M2-GEN]** Acceptance: `SELECT count(*) FROM raw_ticks` = target row count ± 0.1%
 
 ### File: `module2_timescale/indicators.sql`
 
-- [ ] **[M2-SQL]** `fn_vwap(symbol, from, to)` → `SUM(price*volume)/SUM(volume)` from `raw_ticks`
-- [ ] **[M2-SQL]** `fn_sma20(symbol, at)` → `AVG(close)` of last 20 rows from `ohlcv_1m`
-- [ ] **[M2-SQL]** `fn_bollinger(symbol, at)` → returns `(sma20, upper=sma20+2σ, lower=sma20-2σ)` from `ohlcv_1m`
-- [ ] **[M2-SQL]** `fn_rsi14(symbol, at)` → LAG window avg_gain/avg_loss over 14 periods from `ohlcv_1m`
-- [ ] **[M2-SQL]** All 4 functions: `LANGUAGE sql STABLE`; verified against pandas baseline within ±0.5 tolerance
+- [x] **[M2-SQL]** `fn_vwap(symbol, from, to)` → `SUM(price*volume)/SUM(volume)` from `raw_ticks`
+- [x] **[M2-SQL]** `fn_sma20(symbol, at)` → `AVG(close)` of last 20 rows from `ohlcv_1m`
+- [x] **[M2-SQL]** `fn_bollinger(symbol, at)` → returns `(sma20, upper=sma20+2σ, lower=sma20-2σ)` from `ohlcv_1m`
+- [x] **[M2-SQL]** `fn_rsi14(symbol, at)` → LAG window avg_gain/avg_loss over 14 periods from `ohlcv_1m`
+- [x] **[M2-SQL]** All 4 functions: `LANGUAGE sql STABLE`; verified against pandas baseline within ±0.5 tolerance
 
 ### File: `module2_timescale/analytics_api.py`
 
-- [ ] **[M2-API]** `GET /analytics/ticks?symbol=&from=&to=&limit=1000` → raw rows from `raw_ticks`
-- [ ] **[M2-API]** `GET /analytics/ohlcv?symbol=&interval=1m|5m|15m|1h&from=&to=` → correct CA view
-- [ ] **[M2-API]** `GET /analytics/indicators?symbol=&indicator=vwap|sma20|bollinger|rsi&from=&to=` → call SQL functions
-- [ ] **[M2-API]** `GET /analytics/health` → `{"status":"ok","row_count":<int>}`
-- [ ] **[M2-API]** Mount under `/analytics` in `module5_security/main.py` via `app.include_router()`
+- [x] **[M2-API]** `GET /analytics/ticks?symbol=&from=&to=&limit=1000` → raw rows from `raw_ticks`
+- [x] **[M2-API]** `GET /analytics/ohlcv?symbol=&interval=1m|5m|15m|1h&from=&to=` → correct CA view
+- [x] **[M2-API]** `GET /analytics/indicators?symbol=&indicator=vwap|sma20|bollinger|rsi&from=&to=` → call SQL functions
+- [x] **[M2-API]** `GET /analytics/health` → `{"status":"ok","row_count":<int>}`
+- [x] **[M2-API]** Mount under `/analytics` in `module5_security/main.py` via `app.include_router()`
 
 ### File: `module2_timescale/bench_timescale.py`
 
-- [ ] **[M2-BENCH]** Create plain PostgreSQL table `raw_ticks_plain` (identical schema, no hypertable)
-- [ ] **[M2-BENCH]** Load same 1M rows into both `raw_ticks` (hypertable) and `raw_ticks_plain`
-- [ ] **[M2-BENCH]** Run identical OHLCV range query 10× on each; record avg + p99 latency
-- [ ] **[M2-BENCH]** Write summary row to `benchmark_runs`; expected: hypertable ≥ 10× faster
-- [ ] **[M2-BENCH]** Save `benchmark_timescale.csv` + `benchmark_timescale.png` to `module2_timescale/bench_out/`
+- [x] **[M2-BENCH]** Create plain PostgreSQL table `raw_ticks_plain` (identical schema, no hypertable)
+- [x] **[M2-BENCH]** Load same 1M rows into both `raw_ticks` (hypertable) and `raw_ticks_plain`
+- [x] **[M2-BENCH]** Run identical OHLCV range query 10× on each; record avg + p99 latency
+- [x] **[M2-BENCH]** Write summary row to `benchmark_runs`; expected: hypertable ≥ 10× faster
+- [x] **[M2-BENCH]** Save `benchmark_timescale.csv` + `benchmark_timescale.png` to `module2_timescale/bench_out/`
 
 ### Verification
 
-- [ ] **[M2-VERIFY]** After 1M row load: manually `CALL refresh_continuous_aggregate('ohlcv_1m', ...)`, confirm row counts; verify `ohlcv_1h` has fewer rows than `ohlcv_1m`
-- [ ] **[M2-VERIFY]** Run `SELECT compress_chunk(...)` on old chunk; confirm `SELECT * FROM chunk_compression_stats('raw_ticks')` shows `is_compressed = true` — screenshot for report
+- [x] **[M2-VERIFY]** After 1M row load: manually `CALL refresh_continuous_aggregate('ohlcv_1m', ...)`, confirm row counts; verify `ohlcv_1h` has fewer rows than `ohlcv_1m`
+- [x] **[M2-VERIFY]** Run `SELECT compress_chunk(...)` on old chunk; confirm `SELECT * FROM chunk_compression_stats('raw_ticks')` shows `is_compressed = true` — screenshot for report
 
 ---
 
