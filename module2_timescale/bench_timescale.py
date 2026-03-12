@@ -1,8 +1,9 @@
 """
-Benchmark: TimescaleDB hypertable vs plain PostgreSQL table.
+Benchmark: TimescaleDB hypertable vs plain PostgreSQL — on REAL market data.
 
-Loads identical data into both, runs the same OHLCV range query 10×,
-compares avg + p99 latency, and generates a summary chart.
+Always reads from raw_ticks (populated by fetch_real_data.py with real Kraken
+trades) and copies that data into a temporary plain table for comparison.
+No synthetic data is ever generated here.
 
 Usage:
     python -m module2_timescale.bench_timescale
@@ -12,14 +13,12 @@ import csv
 import os
 import statistics
 import time
-import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 
 import matplotlib
 matplotlib.use("Agg")  # headless
 import matplotlib.pyplot as plt
-import numpy as np
 import psycopg
 
 PG_DSN = (
@@ -30,13 +29,13 @@ PG_DSN = (
 )
 
 BENCH_DIR = Path(__file__).parent / "bench_out"
-N_ROWS = 1_000_000
-BATCH_SIZE = 5_000
 N_TRIALS = 10
+WINDOW = "3 days"     # query window used for both plain and hypertable queries
 
+
+# ─── Create plain comparison table ───────────────────────────────────────────
 
 def _create_plain_table(conn: psycopg.Connection) -> None:
-    """Create raw_ticks_plain (identical schema, no hypertable)."""
     conn.execute("DROP TABLE IF EXISTS raw_ticks_plain CASCADE")
     conn.execute("""
         CREATE TABLE raw_ticks_plain (
@@ -51,83 +50,76 @@ def _create_plain_table(conn: psycopg.Connection) -> None:
     """)
     conn.execute("CREATE INDEX idx_plain_symbol_ts ON raw_ticks_plain (symbol, ts DESC)")
     conn.commit()
-    print("✓ Created raw_ticks_plain table")
 
 
-def _generate_rows(n: int, sym: str = "BTC/USD") -> list[tuple]:
-    """Generate n synthetic rows in memory."""
-    rng = np.random.default_rng(42)
-    price = 65000.0
-    start = datetime.now(timezone.utc) - timedelta(seconds=n)
-    rows = []
-    for i in range(n):
-        dW = rng.standard_normal()
-        price *= np.exp(-0.5 * 0.02**2 + 0.02 * dW)
-        ts = start + timedelta(seconds=i)
-        side = "B" if rng.random() < 0.5 else "S"
-        vol = round(rng.uniform(0.01, 10.0), 8)
-        rows.append((ts, sym, round(price, 8), vol, side, uuid.uuid4(), uuid.uuid4()))
-    return rows
+# ─── Populate plain table from real hypertable data ──────────────────────────
+
+def _fill_plain_from_real(conn: psycopg.Connection, window: str) -> int:
+    """Copy the same real data that's in raw_ticks into the plain table."""
+    with conn.cursor() as cur:
+        cur.execute(f"""
+            INSERT INTO raw_ticks_plain (ts, symbol, price, volume, side, order_id, trade_id)
+            SELECT ts, symbol, price, volume, side, order_id, trade_id
+            FROM raw_ticks
+            WHERE ts >= NOW() - INTERVAL '{window}'
+        """)
+        count = cur.rowcount
+    conn.commit()
+    return count
 
 
-def _bulk_load(conn: psycopg.Connection, table: str, rows: list[tuple]) -> None:
-    """COPY rows into the specified table."""
-    total = len(rows)
-    for start in range(0, total, BATCH_SIZE):
-        batch = rows[start : start + BATCH_SIZE]
-        with conn.cursor() as cur:
-            with cur.copy(
-                f"COPY {table} (ts, symbol, price, volume, side, order_id, trade_id) FROM STDIN"
-            ) as copy:
-                for row in batch:
-                    copy.write_row(row)
-        conn.commit()
-    print(f"  ✓ Loaded {total:,} rows into {table}")
+# ─── Queries ─────────────────────────────────────────────────────────────────
 
-
-def _run_ohlcv_query(conn: psycopg.Connection, table: str, symbol: str) -> float:
-    """Run an OHLCV range query and return elapsed ms."""
-    # For the plain table, we compute OHLCV inline
-    query = f"""
-        SELECT
-            time_bucket('1 minute', ts) AS bucket,
-            symbol,
-            (array_agg(price ORDER BY ts))[1] AS open,
-            MAX(price) AS high,
-            MIN(price) AS low,
-            (array_agg(price ORDER BY ts DESC))[1] AS close,
-            SUM(volume) AS volume
-        FROM {table}
-        WHERE symbol = %s
-          AND ts >= NOW() - INTERVAL '1 hour'
-        GROUP BY bucket, symbol
-        ORDER BY bucket
-    """
+def _run_plain(conn: psycopg.Connection, symbol: str, window: str) -> float:
+    """Full GROUP BY scan on the plain table — no pre-aggregation."""
     t0 = time.perf_counter()
     with conn.cursor() as cur:
-        cur.execute(query, (symbol,))
-        cur.fetchall()
-    return (time.perf_counter() - t0) * 1000  # ms
-
-
-def _run_ohlcv_hypertable(conn: psycopg.Connection, symbol: str) -> float:
-    """Run the same query using the continuous aggregate."""
-    query = """
-        SELECT bucket, symbol, open, high, low, close, volume
-        FROM ohlcv_1m
-        WHERE symbol = %s
-          AND bucket >= NOW() - INTERVAL '1 hour'
-        ORDER BY bucket
-    """
-    t0 = time.perf_counter()
-    with conn.cursor() as cur:
-        cur.execute(query, (symbol,))
+        cur.execute(f"""
+            SELECT
+                time_bucket('1 minute', ts) AS bucket,
+                symbol,
+                (array_agg(price ORDER BY ts))[1]    AS open,
+                MAX(price)                            AS high,
+                MIN(price)                            AS low,
+                (array_agg(price ORDER BY ts DESC))[1] AS close,
+                SUM(volume)                           AS volume
+            FROM raw_ticks_plain
+            WHERE symbol = %s
+              AND ts >= NOW() - INTERVAL '{window}'
+            GROUP BY bucket, symbol
+            ORDER BY bucket
+        """, (symbol,))
         cur.fetchall()
     return (time.perf_counter() - t0) * 1000
 
 
-def _write_benchmark_run(conn: psycopg.Connection, plain_times: list, hyper_times: list) -> None:
-    """Write summary to benchmark_runs table."""
+def _run_hyper(conn: psycopg.Connection, symbol: str, window: str) -> float:
+    """Pre-computed continuous aggregate — near-instant index scan."""
+    t0 = time.perf_counter()
+    with conn.cursor() as cur:
+        cur.execute(f"""
+            SELECT bucket, symbol, open, high, low, close, volume
+            FROM ohlcv_1m
+            WHERE symbol = %s
+              AND bucket >= NOW() - INTERVAL '{window}'
+            ORDER BY bucket
+        """, (symbol,))
+        cur.fetchall()
+    return (time.perf_counter() - t0) * 1000
+
+
+# ─── Save benchmark run to DB ─────────────────────────────────────────────────
+
+def _write_benchmark_run(
+    conn: psycopg.Connection,
+    plain_times: list,
+    hyper_times: list,
+    row_count: int,
+) -> None:
+    plain_avg = statistics.mean(plain_times)
+    hyper_avg = statistics.mean(hyper_times)
+    hyper_p99 = sorted(hyper_times)[int(0.99 * len(hyper_times))]
+    speedup = plain_avg / max(hyper_avg, 0.001)
     conn.execute(
         """
         INSERT INTO benchmark_runs (tool, target_endpoint, duration_sec, concurrent_users,
@@ -137,77 +129,72 @@ def _write_benchmark_run(conn: psycopg.Connection, plain_times: list, hyper_time
         """,
         (
             "bench_timescale.py",
-            "OHLCV range query (hypertable vs plain)",
-            0,
-            1,
-            N_TRIALS * 2,
-            N_TRIALS * 2,
-            0,
-            0,
-            statistics.mean(hyper_times),
-            sorted(hyper_times)[int(0.99 * len(hyper_times))],
-            f"Plain avg={statistics.mean(plain_times):.2f}ms p99={sorted(plain_times)[-1]:.2f}ms | "
-            f"Hyper avg={statistics.mean(hyper_times):.2f}ms p99={sorted(hyper_times)[-1]:.2f}ms | "
-            f"Speedup={statistics.mean(plain_times)/max(statistics.mean(hyper_times),0.001):.1f}x",
+            f"3-day OHLCV (hypertable vs plain) — {row_count:,} real rows",
+            0, 1, N_TRIALS * 2, N_TRIALS * 2, 0, 0,
+            hyper_avg,
+            hyper_p99,
+            (
+                f"Real Kraken data ({row_count:,} rows, window={WINDOW}) | "
+                f"Plain avg={plain_avg:.1f}ms | "
+                f"Hyper avg={hyper_avg:.2f}ms | "
+                f"Speedup={speedup:.1f}x"
+            ),
         ),
     )
     conn.commit()
 
+
+# ─── Main ─────────────────────────────────────────────────────────────────────
 
 def main() -> None:
     BENCH_DIR.mkdir(parents=True, exist_ok=True)
     conn = psycopg.connect(PG_DSN)
     sym = "BTC/USD"
 
-    print(f"Generating {N_ROWS:,} rows...")
-    rows = _generate_rows(N_ROWS, sym)
-
-    # Create and load plain table
-    _create_plain_table(conn)
-    print("Loading into raw_ticks_plain...")
-    _bulk_load(conn, "raw_ticks_plain", rows)
-
-    # Check if hypertable already has data; if not, load
+    # Guard: make sure real data is loaded
     with conn.cursor() as cur:
         cur.execute("SELECT count(*) FROM raw_ticks WHERE symbol = %s", (sym,))
-        existing = cur.fetchone()[0]
-    if existing < N_ROWS:
-        print("Loading into raw_ticks (hypertable)...")
-        _bulk_load(conn, "raw_ticks", rows)
+        real_rows = cur.fetchone()[0]
+    if real_rows == 0:
+        print("x raw_ticks is empty! Run fetch_real_data.py first to load Kraken data.")
+        conn.close()
+        return
+    print(f"✓ raw_ticks has {real_rows:,} real rows for {sym}")
 
-    # Refresh continuous aggregate so ohlcv_1m has data
-    print("Refreshing ohlcv_1m continuous aggregate...")
-    oldest_ts = rows[0][0]
-    newest_ts = rows[-1][0] + timedelta(minutes=1)
-    with psycopg.connect(PG_DSN, autocommit=True) as auto_conn:
-        auto_conn.execute(
-            "CALL refresh_continuous_aggregate('ohlcv_1m', %s, %s)",
-            (oldest_ts, newest_ts),
-        )
+    # Create plain table and fill with real data
+    _create_plain_table(conn)
+    copied = _fill_plain_from_real(conn, WINDOW)
+    print(f"✓ Copied {copied:,} rows into raw_ticks_plain (window = {WINDOW})")
+
+    if copied == 0:
+        print(f"⚠ No rows found in the last {WINDOW}. Re-run fetch_real_data.py to refresh.")
+        conn.close()
+        return
 
     # Run benchmark
-    print(f"\nRunning OHLCV query {N_TRIALS}× on each...")
-    plain_times = []
-    hyper_times = []
+    print(f"\nRunning {WINDOW} OHLCV query {N_TRIALS}× on each (real data)...")
+    plain_times: list[float] = []
+    hyper_times: list[float] = []
+
     for i in range(N_TRIALS):
-        pt = _run_ohlcv_query(conn, "raw_ticks_plain", sym)
-        ht = _run_ohlcv_hypertable(conn, sym)
+        pt = _run_plain(conn, sym, WINDOW)
+        ht = _run_hyper(conn, sym, WINDOW)
         plain_times.append(pt)
         hyper_times.append(ht)
-        print(f"  Trial {i+1}: plain={pt:.2f}ms  hyper={ht:.2f}ms")
+        print(f"  Trial {i+1:2d}: plain={pt:>8.2f}ms   hyper={ht:>7.2f}ms")
 
-    # Stats
     plain_avg = statistics.mean(plain_times)
-    plain_p99 = sorted(plain_times)[int(0.99 * N_TRIALS)]
+    plain_p99 = sorted(plain_times)[-1]
     hyper_avg = statistics.mean(hyper_times)
-    hyper_p99 = sorted(hyper_times)[int(0.99 * N_TRIALS)]
-    speedup = plain_avg / max(hyper_avg, 0.001)
+    hyper_p99 = sorted(hyper_times)[-1]
+    speedup   = plain_avg / max(hyper_avg, 0.001)
 
-    print(f"\n{'='*50}")
-    print(f"Plain PG:    avg={plain_avg:.2f}ms  p99={plain_p99:.2f}ms")
-    print(f"Hypertable:  avg={hyper_avg:.2f}ms  p99={hyper_p99:.2f}ms")
-    print(f"Speedup:     {speedup:.1f}×")
-    print(f"{'='*50}")
+    print(f"\n{'='*52}")
+    print(f"  Dataset:     {copied:,} real Kraken rows  (window={WINDOW})")
+    print(f"  Plain PG:    avg={plain_avg:.2f}ms   p99={plain_p99:.2f}ms")
+    print(f"  Hypertable:  avg={hyper_avg:.2f}ms   p99={hyper_p99:.2f}ms")
+    print(f"  Speedup:     {speedup:.1f}×")
+    print(f"{'='*52}")
 
     # Save CSV
     csv_path = BENCH_DIR / "benchmark_timescale.csv"
@@ -215,17 +202,22 @@ def main() -> None:
         w = csv.writer(f)
         w.writerow(["trial", "plain_ms", "hypertable_ms"])
         for i, (pt, ht) in enumerate(zip(plain_times, hyper_times)):
-            w.writerow([i + 1, round(pt, 3), round(ht, 3)])
+            w.writerow([i + 1, f"{pt:.3f}", f"{ht:.3f}"])
     print(f"Saved {csv_path}")
 
     # Save chart
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(11, 6))
     trials = list(range(1, N_TRIALS + 1))
-    ax.bar([t - 0.2 for t in trials], plain_times, 0.4, label="Plain PostgreSQL", color="#e74c3c")
-    ax.bar([t + 0.2 for t in trials], hyper_times, 0.4, label="TimescaleDB Hypertable", color="#2ecc71")
+    ax.bar([t - 0.2 for t in trials], plain_times, 0.4,
+           label=f"Plain PostgreSQL (avg {plain_avg:.0f}ms)", color="#e74c3c", alpha=0.9)
+    ax.bar([t + 0.2 for t in trials], hyper_times, 0.4,
+           label=f"TimescaleDB hypertable (avg {hyper_avg:.1f}ms)", color="#2ecc71", alpha=0.9)
     ax.set_xlabel("Trial")
     ax.set_ylabel("Latency (ms)")
-    ax.set_title("OHLCV Range Query: TimescaleDB vs Plain PostgreSQL")
+    ax.set_title(
+        f"OHLCV Range Query ({WINDOW}) — Real Kraken Data\n"
+        f"{copied:,} rows  |  Speedup: {speedup:.1f}×"
+    )
     ax.legend()
     ax.set_xticks(trials)
     fig.tight_layout()
@@ -233,11 +225,11 @@ def main() -> None:
     fig.savefig(png_path, dpi=150)
     print(f"Saved {png_path}")
 
-    # Write to benchmark_runs
-    _write_benchmark_run(conn, plain_times, hyper_times)
+    # Persist to DB
+    _write_benchmark_run(conn, plain_times, hyper_times, copied)
     print("✓ Benchmark summary written to benchmark_runs table")
 
-    # Cleanup
+    # Cleanup temp table
     conn.execute("DROP TABLE IF EXISTS raw_ticks_plain CASCADE")
     conn.commit()
     conn.close()
