@@ -16,6 +16,7 @@ import sys
 import time
 import uuid
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 import psycopg
 import requests
@@ -38,12 +39,26 @@ PG_DSN = (
 PAIRS = {
     "XXBTZUSD": "BTC/USD",
     "XETHZUSD": "ETH/USD",
+    "SOLUSD": "SOL/USD",
+    "XXRPZUSD": "XRP/USD",
+    "ADAUSD": "ADA/USD",
+    "DOTUSD": "DOT/USD",
+    "XDGUSD": "DOGE/USD",
+    "AVAXUSD": "AVAX/USD",
+    "MATICUSD": "MATIC/USD",
 }
 
 # Kraken query pair names (what you pass in the URL param)
 QUERY_PAIRS = {
     "XXBTZUSD": "XBTUSD",
     "XETHZUSD": "ETHUSD",
+    "SOLUSD": "SOLUSD",
+    "XXRPZUSD": "XRPUSD",
+    "ADAUSD": "ADAUSD",
+    "DOTUSD": "DOTUSD",
+    "XDGUSD": "XDGUSD",
+    "AVAXUSD": "AVAXUSD",
+    "MATICUSD": "MATICUSD",
 }
 
 
@@ -53,15 +68,16 @@ RATE_LIMIT = 1.2   # seconds between Kraken calls
 DAYS_BACK = 3
 
 
-# ─── 1. Wipe old data ────────────────────────────────────────────────────────
+# ─── 1. Get Latest Timestamp ───────────────────────────────────────────────────
 
-def wipe(conn: psycopg.Connection) -> None:
-    log.info("Deleting all rows from raw_ticks (no CASCADE lock)...")
+def get_latest_ts(conn: psycopg.Connection, symbol: str) -> Optional[datetime]:
+    """Get the most recent timestamp we already have for this symbol."""
     with conn.cursor() as cur:
-        cur.execute("DELETE FROM raw_ticks")
-        deleted = cur.rowcount
-    conn.commit()
-    log.info("Deleted %d rows.", deleted)
+        cur.execute("SELECT MAX(ts) FROM raw_ticks WHERE symbol = %s", (symbol,))
+        res = cur.fetchone()
+        if res and res[0]:
+            return res[0]
+    return None
 
 
 # ─── 2. Fetch from Kraken ────────────────────────────────────────────────────
@@ -128,20 +144,28 @@ def refresh_cas(start: datetime, end: datetime) -> None:
 # ─── Main ────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    now     = datetime.now(timezone.utc)
-    start   = now - timedelta(days=DAYS_BACK)
-    since_ns = int(start.timestamp() * 1e9)
+    now = datetime.now(timezone.utc)
+    max_days_back = now - timedelta(days=DAYS_BACK)
 
     conn = psycopg.connect(PG_DSN)
-
-    # Step 1
-    wipe(conn)
-
     total = 0
+
+    refresh_start = now  # Track the earliest point we need to refresh CAs for
 
     # Steps 2 + 3
     for pair, symbol in PAIRS.items():
-        log.info("=== %s (%s) — fetching from %s ===", symbol, pair, start.isoformat())
+        latest_ts = get_latest_ts(conn, symbol)
+        
+        if latest_ts and latest_ts > max_days_back:
+            start_fetch_ts = latest_ts
+            log.info("=== %s (%s) — DB has data. Appending from %s ===", symbol, pair, start_fetch_ts.isoformat())
+        else:
+            start_fetch_ts = max_days_back
+            log.info("=== %s (%s) — DB empty or too old. Fetching %d days back from %s ===", symbol, pair, DAYS_BACK, start_fetch_ts.isoformat())
+
+        refresh_start = min(refresh_start, start_fetch_ts)
+        since_ns = int(start_fetch_ts.timestamp() * 1e9)
+        
         cursor = since_ns
         page   = 0
         count  = 0
@@ -195,9 +219,11 @@ def main() -> None:
     conn.close()
     log.info("All pairs done. Total rows: %d", total)
 
-    # Step 4
-    log.info("Refreshing continuous aggregates (%s → %s)...", start.isoformat(), now.isoformat())
-    refresh_cas(start, now + timedelta(minutes=1))
+    # Step 4: Refresh CAs (buffer window by 2 hours to satisfy 1h bucket requirements)
+    safe_refresh_start = refresh_start - timedelta(hours=2)
+    safe_refresh_end = now + timedelta(hours=2)
+    log.info("Refreshing continuous aggregates (%s → %s)...", safe_refresh_start.isoformat(), safe_refresh_end.isoformat())
+    refresh_cas(safe_refresh_start, safe_refresh_end)
     log.info("=== COMPLETE. Real data loaded and aggregates refreshed. ===")
 
 
