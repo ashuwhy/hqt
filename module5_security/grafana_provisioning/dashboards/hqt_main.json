@@ -1696,7 +1696,7 @@
           "format": "table",
           "rawQuery": true,
           "refId": "A",
-          "rawSql": "WITH expanded AS (\n  SELECT unnest(path) AS asset, profit_pct\n  FROM arbitrage_signals\n  WHERE $__timeFilter(ts)\n    AND method = 'CLASSICAL'\n)\nSELECT\n  asset,\n  count(*) AS appearances,\n  round(avg(profit_pct)::numeric, 4) AS avg_profit\nFROM expanded\nWHERE asset != (SELECT unnest FROM (SELECT unnest(path) FROM arbitrage_signals LIMIT 1) x LIMIT 0)\nGROUP BY asset\nORDER BY appearances DESC\nLIMIT 20"
+          "rawSql": "WITH expanded AS (\n  SELECT unnest(path[1:array_length(path, 1)-1]) AS asset, profit_pct\n  FROM arbitrage_signals\n  WHERE $__timeFilter(ts)\n    AND method = 'CLASSICAL'\n)\nSELECT\n  asset,\n  count(*) AS appearances,\n  round(avg(profit_pct)::numeric, 4) AS avg_profit\nFROM expanded\nGROUP BY asset\nORDER BY appearances DESC\nLIMIT 20"
         }
       ],
       "title": "Top Arbitrage Assets (All 20 — Crypto + Fiat)",
