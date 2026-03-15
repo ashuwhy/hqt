@@ -28,7 +28,7 @@ import requests
 logger = logging.getLogger(__name__)
 
 # ── Asset lists ──────────────────────────────────────────────────────────────
-CRYPTO = ["BTC", "ETH", "BNB", "SOL", "ADA", "XRP", "DOGE", "AVAX", "MATIC", "DOT"]
+CRYPTO = ["BTC", "ETH", "LINK", "SOL", "ADA", "XRP", "DOGE", "AVAX", "UNI", "DOT"]
 FIAT = ["USD", "EUR", "GBP", "JPY", "AUD", "CAD", "CHF", "INR", "SGD", "HKD"]
 ALL_ASSETS = CRYPTO + FIAT
 
@@ -37,13 +37,13 @@ ALL_ASSETS = CRYPTO + FIAT
 KRAKEN_TICKER_MAP = {
     "XXBTZUSD": "BTC",
     "XETHZUSD": "ETH",
-    "BNBUSD":   "BNB",
+    "LINKUSD":  "LINK",
     "SOLUSD":   "SOL",
     "ADAUSD":   "ADA",
     "XXRPZUSD": "XRP",
     "XDGUSD":   "DOGE",
     "AVAXUSD":  "AVAX",
-    "MATICUSD": "MATIC",
+    "UNIUSD":   "UNI",
     "DOTUSD":   "DOT",
 }
 
@@ -156,10 +156,10 @@ def _fetch_fiat_rates() -> dict[str, dict[str, float]]:
 # ── Fallback rates (approximate, only used if APIs are unreachable) ──────────
 FALLBACK_CRYPTO_USD: dict[str, tuple[float, float]] = {
     "BTC": (67000.0, 67050.0), "ETH": (3480.0, 3482.0),
-    "BNB": (560.0, 560.50),    "SOL": (145.0, 145.20),
+    "LINK": (14.50, 14.52),    "SOL": (145.0, 145.20),
     "ADA": (0.62, 0.621),      "XRP": (0.58, 0.581),
     "DOGE": (0.165, 0.1655),   "AVAX": (38.0, 38.10),
-    "MATIC": (0.92, 0.9215),   "DOT": (7.80, 7.82),
+    "UNI": (6.50, 6.52),       "DOT": (7.80, 7.82),
 }
 FALLBACK_FIAT: dict[str, dict[str, float]] = {
     "EUR": {"bid": 0.9212, "ask": 0.9214, "rate": 0.9213},

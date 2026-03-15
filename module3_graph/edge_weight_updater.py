@@ -48,13 +48,13 @@ FIAT_POLL_INTERVAL = 300.0  # Alpha Vantage free tier: 25 req/day → poll every
 CRYPTO_PAIRS: list[dict[str, str]] = [
     {"src": "BTC",  "dst": "USD", "lob": "BTCUSD",   "tsdb": "BTC/USD"},
     {"src": "ETH",  "dst": "USD", "lob": "ETHUSD",   "tsdb": "ETH/USD"},
-    {"src": "BNB",  "dst": "USD", "lob": "BNBUSD",   "tsdb": "BNB/USD"},
+    {"src": "LINK", "dst": "USD", "lob": "LINKUSD",   "tsdb": "LINK/USD"},
     {"src": "SOL",  "dst": "USD", "lob": "SOLUSD",   "tsdb": "SOL/USD"},
     {"src": "ADA",  "dst": "USD", "lob": "ADAUSD",   "tsdb": "ADA/USD"},
     {"src": "XRP",  "dst": "USD", "lob": "XRPUSD",   "tsdb": "XRP/USD"},
     {"src": "DOGE", "dst": "USD", "lob": "DOGEUSD",  "tsdb": "DOGE/USD"},
     {"src": "AVAX", "dst": "USD", "lob": "AVAXUSD",  "tsdb": "AVAX/USD"},
-    {"src": "MATIC","dst": "USD", "lob": "MATICUSD",  "tsdb": "MATIC/USD"},
+    {"src": "UNI",  "dst": "USD", "lob": "UNIUSD",   "tsdb": "UNI/USD"},
     {"src": "DOT",  "dst": "USD", "lob": "DOTUSD",   "tsdb": "DOT/USD"},
 ]
 
@@ -236,7 +236,10 @@ def _update_fiat_edges(conn: psycopg.Connection, crypto_usd: dict[str, tuple[flo
         3. Crypto → Fiat  and Fiat → Crypto  (via USD)
     """
     if not _fiat_cache:
+        logger.debug("_update_fiat_edges: fiat cache empty, skipping")
         return 0
+
+    logger.info("Updating fiat edges: %d fiat currencies, %d cryptos", len(_fiat_cache), len(crypto_usd))
 
     updated = 0
     ts = int(time.time() * 1000)
@@ -293,6 +296,8 @@ def _update_fiat_edges(conn: psycopg.Connection, crypto_usd: dict[str, tuple[flo
                 _age_exec(conn, cypher_f2c)
             updated += 1
 
+    logger.info("Fiat edge update: %d edges refreshed (USD↔Fiat + Fiat↔Fiat + %d cryptos × %d fiats)",
+                updated, len(crypto_usd), len(_fiat_cache))
     return updated
 
 
@@ -339,6 +344,30 @@ async def run_updater(graph_conn: psycopg.Connection) -> None:
                 except Exception as exc:
                     logger.warning("Edge update error %s→%s: %s", pair["src"], pair["dst"], exc)
 
+            # ── Fill in missing cryptos from graph (e.g. BNB, MATIC not on Kraken) ──
+            # Without this, cross-rates are only calculated for pairs with live feeds,
+            # leaving stale cross-rates for pairs like ETH→BNB → phantom arbitrage.
+            for pair in CRYPTO_PAIRS:
+                sym = pair["src"]
+                if sym not in crypto_usd_prices:
+                    try:
+                        cypher = (
+                            f"MATCH (a:Asset {{symbol: '{sym}'}})-[r:EXCHANGE]->"
+                            f"(b:Asset {{symbol: 'USD'}}) RETURN r.bid, r.ask"
+                        )
+                        sql = f"SELECT * FROM ag_catalog.cypher('fx_graph', $cypher$ {cypher} $cypher$) AS (bid agtype, ask agtype);"
+                        with graph_conn.cursor() as cur:
+                            cur.execute("SET search_path = ag_catalog, \"$user\", public;")
+                            cur.execute(sql)
+                            row = cur.fetchone()
+                            if row:
+                                bid = float(str(row[0]))
+                                ask = float(str(row[1]))
+                                if bid > 0 and ask > 0:
+                                    crypto_usd_prices[sym] = (bid, ask)
+                    except Exception:
+                        pass
+
             # ── Update crypto ↔ crypto cross-rates ───────────────────────────
             crypto_list = list(crypto_usd_prices.keys())
             for c1 in crypto_list:
@@ -359,7 +388,7 @@ async def run_updater(graph_conn: psycopg.Connection) -> None:
                         _age_exec(graph_conn, cypher)
                         updated += 1
 
-            # ── Update fiat edges (every 60s) ────────────────────────────────
+            # ── Update fiat edges (every 5 min) ──────────────────────────────
             await _refresh_fiat_cache(client)
             if _fiat_cache:
                 try:
