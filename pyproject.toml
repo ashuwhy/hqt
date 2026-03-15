@@ -1,9 +1,0 @@
-[project]
-name = "hqt"
-version = "1.0.0"
-description = "Hybrid Trading Database System"
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope = "function"
