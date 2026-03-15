@@ -81,8 +81,8 @@ async def lifespan(app: FastAPI):
 
     # Dedicated connections for long-running background tasks
     graph_conn = psycopg.connect(_dsn(), autocommit=False)
-    updater_conn = psycopg.connect(_dsn(), autocommit=False)
-    detector_conn = psycopg.connect(_dsn(), autocommit=False)
+    updater_conn = psycopg.connect(_dsn(), autocommit=True)
+    detector_conn = psycopg.connect(_dsn(), autocommit=True)
 
     # 1. Initialise graph (idempotent)
     try:

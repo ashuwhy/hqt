@@ -328,6 +328,23 @@ def init_graph(conn: psycopg.Connection | None = None) -> dict:
         own_conn = True
 
     try:
+        # 0. Ensure the AGE graph exists (idempotent — safe to re-run)
+        with conn.cursor() as cur:
+            cur.execute("SET search_path = ag_catalog, \"$user\", public;")
+            cur.execute("LOAD 'age';")
+            cur.execute(
+                "SELECT EXISTS ("
+                "  SELECT 1 FROM ag_catalog.ag_graph WHERE name = 'fx_graph'"
+                ");"
+            )
+            exists = cur.fetchone()[0]
+            if not exists:
+                cur.execute("SELECT * FROM ag_catalog.create_graph('fx_graph');")
+                conn.commit()
+                logger.info("Created AGE graph 'fx_graph'")
+            else:
+                logger.info("AGE graph 'fx_graph' already exists")
+
         # 1. Fetch real rates
         crypto_prices = _fetch_kraken_prices()
         fiat_rates = _fetch_fiat_rates()

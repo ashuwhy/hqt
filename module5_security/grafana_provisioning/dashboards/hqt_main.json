@@ -1636,6 +1636,279 @@
       ],
       "title": "Avg Arbitrage Profit per 5-min Bucket",
       "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "continuous-BlPu"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "drawStyle": "bars",
+            "fillOpacity": 85,
+            "gradientMode": "hue",
+            "lineWidth": 0,
+            "showPoints": "never",
+            "barWidthFactor": 0.7
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#6366f1",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 16,
+        "x": 0,
+        "y": 74
+      },
+      "id": 207,
+      "options": {
+        "legend": {
+          "displayMode": "hidden",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "desc"
+        },
+        "orientation": "horizontal"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "refId": "A",
+          "rawSql": "WITH expanded AS (\n  SELECT unnest(path) AS asset, profit_pct\n  FROM arbitrage_signals\n  WHERE $__timeFilter(ts)\n    AND method = 'CLASSICAL'\n)\nSELECT\n  asset,\n  count(*) AS appearances,\n  round(avg(profit_pct)::numeric, 4) AS avg_profit\nFROM expanded\nWHERE asset != (SELECT unnest FROM (SELECT unnest(path) FROM arbitrage_signals LIMIT 1) x LIMIT 0)\nGROUP BY asset\nORDER BY appearances DESC\nLIMIT 20"
+        }
+      ],
+      "title": "Top Arbitrage Assets (All 20 — Crypto + Fiat)",
+      "type": "barchart"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "#a78bfa",
+            "mode": "fixed"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#a78bfa",
+                "value": null
+              },
+              {
+                "color": "#22c55e",
+                "value": 5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 74
+      },
+      "id": 208,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "textMode": "auto",
+        "orientation": "vertical"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "refId": "A",
+          "rawSql": "SELECT\n  count(DISTINCT array_to_string(path, '→')) AS \"Unique Cycles\",\n  count(DISTINCT path[1]) AS \"Assets Involved\",\n  round(avg(circuit_depth)::numeric, 1) AS \"Avg Hops\"\nFROM arbitrage_signals\nWHERE $__timeFilter(ts)\n  AND method = 'CLASSICAL'"
+        }
+      ],
+      "title": "Graph Network Activity",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "asset"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#38bdf8",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "type"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 60
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "avg_profit"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 4
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-GrYlRd"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "cycles"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 70
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 82
+      },
+      "id": 209,
+      "options": {
+        "footer": {
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "cycles",
+            "desc": true
+          }
+        ],
+        "cellHeight": "sm"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "refId": "A",
+          "rawSql": "WITH expanded AS (\n  SELECT unnest(path) AS asset, profit_pct, circuit_depth\n  FROM arbitrage_signals\n  WHERE $__timeFilter(ts)\n    AND method = 'CLASSICAL'\n)\nSELECT\n  asset,\n  CASE\n    WHEN asset IN ('BTC','ETH','LINK','SOL','ADA','XRP','DOGE','AVAX','UNI','DOT') THEN '🪙 Crypto'\n    ELSE '💱 Fiat'\n  END AS type,\n  count(*) AS cycles,\n  round(avg(profit_pct)::numeric, 4) AS avg_profit,\n  round(max(profit_pct)::numeric, 4) AS max_profit,\n  round(avg(circuit_depth)::numeric, 1) AS avg_hops\nFROM expanded\nGROUP BY asset\nORDER BY cycles DESC"
+        }
+      ],
+      "title": "All Assets in Arbitrage Cycles (Crypto + Fiat)",
+      "type": "table"
     }
   ],
   "refresh": "5s",
