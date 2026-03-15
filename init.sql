@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS raw_ticks (
     side        CHAR(1)            NOT NULL CHECK (side IN ('B','S')),
     order_id    UUID               NOT NULL,
     trade_id    UUID               NOT NULL,
-    exchange    VARCHAR(30)        DEFAULT 'SYNTHETIC'
+    exchange    VARCHAR(30)        DEFAULT 'KRAKEN'
 );
 
 SELECT create_hypertable('raw_ticks', 'ts', partitioning_column => 'symbol',

@@ -70,6 +70,7 @@ def _parse_message(raw: bytes) -> dict | None:
             "side": side,
             "order_id": order_id,
             "trade_id": trade_id,
+            "exchange": "KRAKEN",
         }
     except (json.JSONDecodeError, KeyError, ValueError, TypeError) as exc:
         logger.warning("Malformed message skipped: %s — %s", exc, raw[:200])
@@ -84,7 +85,7 @@ def _bulk_insert(conn: psycopg.Connection, rows: list[dict]) -> int:
     start_time = time.monotonic()
     with conn.cursor() as cur:
         with cur.copy(
-            "COPY raw_ticks (ts, symbol, price, volume, side, order_id, trade_id) "
+            "COPY raw_ticks (ts, symbol, price, volume, side, order_id, trade_id, exchange) "
             "FROM STDIN"
         ) as copy:
             for r in rows:
@@ -96,6 +97,7 @@ def _bulk_insert(conn: psycopg.Connection, rows: list[dict]) -> int:
                     r["side"],
                     r["order_id"],
                     r["trade_id"],
+                    r["exchange"],
                 ))
     conn.commit()
     elapsed = time.monotonic() - start_time
