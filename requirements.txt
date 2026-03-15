@@ -15,6 +15,9 @@ confluent-kafka==2.3.0
 qiskit==0.45.2
 qiskit-aer==0.13.2
 
+# HTTP Client (edge updater, proxy)
+httpx>=0.26.0
+
 # Data Structures & Utils
 sortedcontainers==2.4.0
 faker==23.2.1

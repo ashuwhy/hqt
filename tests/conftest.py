@@ -50,3 +50,11 @@ async def analytics_client() -> AsyncGenerator[httpx.AsyncClient, None]:
     base_url = os.getenv("ANALYTICS_TEST_URL", "http://localhost:8002")
     async with httpx.AsyncClient(base_url=base_url, timeout=10.0) as client:
         yield client
+
+
+@pytest.fixture
+async def graph_client() -> AsyncGenerator[httpx.AsyncClient, None]:
+    """Async HTTP client for the Graph Service API."""
+    base_url = os.getenv("GRAPH_TEST_URL", "http://graph-service:8003")
+    async with httpx.AsyncClient(base_url=base_url, timeout=10.0) as client:
+        yield client
