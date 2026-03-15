@@ -45,7 +45,8 @@ PAIRS = {
     "DOTUSD": "DOT/USD",
     "XDGUSD": "DOGE/USD",
     "AVAXUSD": "AVAX/USD",
-    "MATICUSD": "MATIC/USD",
+    "LINKUSD": "LINK/USD",
+    "UNIUSD": "UNI/USD",
 }
 
 # Kraken query pair names (what you pass in the URL param)
@@ -58,7 +59,8 @@ QUERY_PAIRS = {
     "DOTUSD": "DOTUSD",
     "XDGUSD": "XDGUSD",
     "AVAXUSD": "AVAXUSD",
-    "MATICUSD": "MATICUSD",
+    "LINKUSD": "LINKUSD",
+    "UNIUSD": "UNIUSD",
 }
 
 
