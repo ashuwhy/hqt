@@ -3,7 +3,10 @@
     "list": [
       {
         "builtIn": 1,
-        "datasource": { "type": "datasource", "uid": "grafana" },
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -14,84 +17,163 @@
   },
   "editable": true,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 1,
+  "graphTooltip": 2,
   "id": null,
   "links": [],
   "liveNow": true,
   "panels": [
     {
-      "datasource": { "type": "postgres", "uid": "TimescaleDB" },
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 100,
+      "title": "Price Analysis",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "currencyUSD",
           "decimals": 2,
           "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 0,
-            "showPoints": "never",
-            "spanNulls": false,
-            "pointSize": 5,
-            "axisPlacement": "auto",
-            "axisLabel": "",
-            "axisColorMode": "text",
-            "scaleDistribution": { "type": "linear" },
-            "axisCenteredZero": false,
-            "axisGridShow": true,
-            "thresholdsStyle": { "mode": "off" }
+            "upColor": "#22c55e",
+            "downColor": "#ef4444",
+            "includeAllFields": true
           },
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "mappings": [],
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "open" },
-            "properties": [{ "id": "custom.drawStyle", "value": "line" }, { "id": "hideFrom", "value": { "legend": false, "tooltip": false, "viz": true } }]
+            "matcher": {
+              "id": "byName",
+              "options": "sma20"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#facc15",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "solid"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                }
+              }
+            ]
           },
           {
-            "matcher": { "id": "byName", "options": "high" },
-            "properties": [{ "id": "custom.drawStyle", "value": "line" }, { "id": "hideFrom", "value": { "legend": false, "tooltip": false, "viz": true } }]
-          },
-          {
-            "matcher": { "id": "byName", "options": "low" },
-            "properties": [{ "id": "custom.drawStyle", "value": "line" }, { "id": "hideFrom", "value": { "legend": false, "tooltip": false, "viz": true } }]
-          },
-          {
-            "matcher": { "id": "byName", "options": "close" },
-            "properties": [{ "id": "custom.drawStyle", "value": "line" }, { "id": "hideFrom", "value": { "legend": false, "tooltip": false, "viz": true } }]
-          },
-          {
-            "matcher": { "id": "byName", "options": "sma20" },
-            "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }, { "id": "custom.lineWidth", "value": 2 }]
-          },
-          {
-            "matcher": { "id": "byName", "options": "sma50" },
-            "properties": [{ "id": "color", "value": { "fixedColor": "purple", "mode": "fixed" } }, { "id": "custom.lineWidth", "value": 2 }]
+            "matcher": {
+              "id": "byName",
+              "options": "sma50"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#a855f7",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash"
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                }
+              }
+            ]
           }
         ]
       },
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 0 },
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 1
+      },
       "id": 1,
       "options": {
-        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "none" }
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "includeAllFields": true
       },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "TimescaleDB" },
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
           "refId": "A",
-          "rawSql": "SELECT\n  bucket AS \"time\",\n  open,\n  high,\n  low,\n  close,\n  AVG(close) OVER(ORDER BY bucket ROWS BETWEEN 19 PRECEDING AND CURRENT ROW) as sma20,\n  AVG(close) OVER(ORDER BY bucket ROWS BETWEEN 49 PRECEDING AND CURRENT ROW) as sma50\nFROM ${interval:raw}\nWHERE\n  $__timeFilter(bucket)\n  AND symbol = '${symbol}'\nORDER BY 1"
+          "rawSql": "SELECT\n  bucket AS \"time\",\n  open,\n  high,\n  low,\n  close,\n  volume,\n  AVG(close) OVER(ORDER BY bucket ROWS BETWEEN 19 PRECEDING AND CURRENT ROW) as sma20,\n  AVG(close) OVER(ORDER BY bucket ROWS BETWEEN 49 PRECEDING AND CURRENT ROW) as sma50\nFROM ${interval:raw}\nWHERE\n  $__timeFilter(bucket)\n  AND symbol = '${symbol}'\nORDER BY 1"
         }
       ],
-      "title": "Price OHLCV + SMA (${interval}) — ${symbol}",
-      "type": "timeseries"
+      "title": "Price OHLCV + SMA — ${symbol}  [${interval}]",
+      "type": "candlestick"
     },
     {
-      "datasource": { "type": "postgres", "uid": "TimescaleDB" },
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
       "fieldConfig": {
         "defaults": {
           "max": 100,
@@ -100,32 +182,61 @@
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
-            "fillOpacity": 10,
+            "fillOpacity": 15,
             "showPoints": "never",
             "spanNulls": false,
-            "gradientMode": "none"
+            "gradientMode": "scheme",
+            "lineInterpolation": "smooth",
+            "thresholdsStyle": {
+              "mode": "dashed+area"
+            }
           },
-          "color": { "fixedColor": "cyan", "mode": "fixed" },
+          "color": {
+            "mode": "continuous-GrYlRd"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "red", "value": 70 },
-              { "color": "green", "value": 30 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 30
+              },
+              {
+                "color": "red",
+                "value": 70
+              }
             ]
           }
         },
         "overrides": []
       },
-      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 10 },
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
       "id": 8,
       "options": {
-        "legend": { "displayMode": "hidden", "placement": "bottom", "showLegend": false },
-        "tooltip": { "mode": "single", "sort": "none" }
+        "legend": {
+          "displayMode": "hidden",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "TimescaleDB" },
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
@@ -137,86 +248,659 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "postgres", "uid": "TimescaleDB" },
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "id": 101,
+      "title": "Volume & Trade Flow",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "fixed", "fixedColor": "blue" },
           "custom": {
             "drawStyle": "bars",
-            "fillOpacity": 60,
-            "lineWidth": 1,
+            "fillOpacity": 80,
+            "lineWidth": 0,
             "showPoints": "never",
-            "spanNulls": false,
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "gradientMode": "none",
+            "barWidthFactor": 0.9
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "buy_volume"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#22c55e",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "Buy Volume"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "sell_volume"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#ef4444",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "Sell Volume"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 14,
+        "x": 0,
+        "y": 19
+      },
+      "id": 9,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "refId": "A",
+          "rawSql": "SELECT\n  time_bucket('1 minute', ts) AS \"time\",\n  SUM(CASE WHEN side = 'B' THEN volume ELSE 0 END) as buy_volume,\n  SUM(CASE WHEN side = 'S' THEN volume ELSE 0 END) as sell_volume\nFROM raw_ticks\nWHERE $__timeFilter(ts) AND symbol = '${symbol}'\nGROUP BY 1\nORDER BY 1"
+        }
+      ],
+      "title": "Volume by Side — ${symbol}",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Buys"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#22c55e",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Sells"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#ef4444",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 5,
+        "x": 14,
+        "y": 19
+      },
+      "id": 10,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "pieType": "donut",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "values": [
+            "value",
+            "percent"
+          ]
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "refId": "A",
+          "rawSql": "SELECT\n  SUM(CASE WHEN side = 'B' THEN 1 ELSE 0 END) AS \"Buys\",\n  SUM(CASE WHEN side = 'S' THEN 1 ELSE 0 END) AS \"Sells\"\nFROM raw_ticks\nWHERE $__timeFilter(ts) AND symbol = '${symbol}'"
+        }
+      ],
+      "title": "Buy / Sell Ratio — ${symbol}",
+      "type": "piechart"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "showPoints": "never",
+            "spanNulls": true,
+            "lineInterpolation": "smooth",
             "gradientMode": "opacity"
+          },
+          "color": {
+            "fixedColor": "#38bdf8",
+            "mode": "fixed"
           }
         },
         "overrides": []
       },
-      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 14 },
-      "id": 2,
+      "gridPos": {
+        "h": 7,
+        "w": 5,
+        "x": 19,
+        "y": 19
+      },
+      "id": 11,
       "options": {
-        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "single", "sort": "none" }
+        "legend": {
+          "displayMode": "hidden",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "TimescaleDB" },
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
           "refId": "A",
-          "rawSql": "SELECT\n  bucket AS \"time\",\n  volume\nFROM ${interval:raw}\nWHERE\n  $__timeFilter(bucket)\n  AND symbol = '${symbol}'\nORDER BY 1"
+          "rawSql": "SELECT\n  time_bucket('1 minute', ts) AS \"time\",\n  SUM(CASE WHEN side = 'B' THEN volume ELSE -volume END) as imbalance\nFROM raw_ticks\nWHERE $__timeFilter(ts) AND symbol = '${symbol}'\nGROUP BY 1\nORDER BY 1"
         }
       ],
-      "title": "Volume (${interval}) — ${symbol}",
+      "title": "Trade Flow Imbalance — ${symbol}",
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "postgres", "uid": "TimescaleDB" },
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": [
-          {
-            "matcher": { "id": "byName", "options": "price" },
-            "properties": [{ "id": "unit", "value": "currencyUSD" }, { "id": "decimals", "value": 2 }]
-          }
-        ]
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 26
       },
-      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 14 },
-      "id": 3,
+      "id": 102,
+      "title": "Market Microstructure",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "decimals": 2,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": false,
+            "lineInterpolation": "smooth",
+            "gradientMode": "opacity"
+          },
+          "color": {
+            "fixedColor": "#f59e0b",
+            "mode": "fixed"
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 27
+      },
+      "id": 12,
       "options": {
-        "footer": { "fields": "", "reducer": ["sum"], "show": false },
-        "showHeader": true,
-        "sortBy": [{ "displayName": "time", "desc": true }]
+        "legend": {
+          "displayMode": "hidden",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "TimescaleDB" },
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
           "refId": "A",
-          "rawSql": "SELECT\n  ts AS \"time\",\n  price,\n  volume,\n  side,\n  exchange\nFROM raw_ticks\nWHERE\n  $__timeFilter(ts)\n  AND symbol = '${symbol}'\nORDER BY ts DESC\nLIMIT 100"
+          "rawSql": "SELECT\n  time_bucket('1 minute', ts) AS \"time\",\n  SUM(price * volume) / NULLIF(SUM(volume), 0) as vwap\nFROM raw_ticks\nWHERE $__timeFilter(ts) AND symbol = '${symbol}'\nGROUP BY 1\nORDER BY 1"
+        }
+      ],
+      "title": "VWAP — ${symbol}",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 3,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "showPoints": "never",
+            "spanNulls": false,
+            "lineInterpolation": "smooth",
+            "gradientMode": "scheme"
+          },
+          "color": {
+            "mode": "continuous-BlYlRd"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.1
+              },
+              {
+                "color": "red",
+                "value": 0.5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 27
+      },
+      "id": 13,
+      "options": {
+        "legend": {
+          "displayMode": "hidden",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "refId": "A",
+          "rawSql": "SELECT\n  bucket AS \"time\",\n  CASE WHEN close > 0 THEN ((high - low) / close) * 100 ELSE 0 END as spread_pct\nFROM ${interval:raw}\nWHERE $__timeFilter(bucket) AND symbol = '${symbol}'\nORDER BY 1"
+        }
+      ],
+      "title": "Intra-Bar Spread % — ${symbol}",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      },
+      "id": 103,
+      "title": "Recent Trades",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "price"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "custom.width",
+                "value": 120
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#facc15",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "volume"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 6
+              },
+              {
+                "id": "custom.width",
+                "value": 120
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "side"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "B": {
+                        "text": "BUY",
+                        "color": "#22c55e"
+                      },
+                      "S": {
+                        "text": "SELL",
+                        "color": "#ef4444"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "time"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "exchange"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#64748b",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 35
+      },
+      "id": 3,
+      "options": {
+        "footer": {
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "time",
+            "desc": true
+          }
+        ],
+        "cellHeight": "sm"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "refId": "A",
+          "rawSql": "SELECT\n  ts AS \"time\",\n  price,\n  volume,\n  side,\n  exchange\nFROM raw_ticks\nWHERE\n  $__timeFilter(ts)\n  AND symbol = '${symbol}'\nORDER BY ts DESC\nLIMIT 200"
         }
       ],
       "title": "Recent Trades — ${symbol}",
       "type": "table"
     },
     {
-      "datasource": { "type": "postgres", "uid": "TimescaleDB" },
-      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 20 },
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "id": 104,
+      "title": "System Health",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#22c55e",
+                "value": null
+              },
+              {
+                "color": "#22c55e",
+                "value": 100
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 0,
+        "y": 45
+      },
       "id": 4,
       "options": {
-        "colorMode": "value",
+        "colorMode": "background_solid",
         "graphMode": "area",
-        "justifyMode": "auto",
+        "justifyMode": "center",
         "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name"
       },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "TimescaleDB" },
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
@@ -228,20 +912,54 @@
       "type": "stat"
     },
     {
-      "datasource": { "type": "postgres", "uid": "TimescaleDB" },
-      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 20 },
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#38bdf8",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 4,
+        "y": 45
+      },
       "id": 5,
       "options": {
-        "colorMode": "value",
+        "colorMode": "background_solid",
         "graphMode": "area",
-        "justifyMode": "auto",
+        "justifyMode": "center",
         "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name"
       },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "TimescaleDB" },
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
@@ -253,20 +971,54 @@
       "type": "stat"
     },
     {
-      "datasource": { "type": "postgres", "uid": "TimescaleDB" },
-      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 20 },
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#a855f7",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 8,
+        "y": 45
+      },
       "id": 6,
       "options": {
-        "colorMode": "value",
+        "colorMode": "background_solid",
         "graphMode": "area",
-        "justifyMode": "auto",
+        "justifyMode": "center",
         "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name"
       },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "TimescaleDB" },
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
@@ -278,20 +1030,63 @@
       "type": "stat"
     },
     {
-      "datasource": { "type": "postgres", "uid": "TimescaleDB" },
-      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 20 },
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#22c55e",
+                "value": null
+              },
+              {
+                "color": "#facc15",
+                "value": 30
+              },
+              {
+                "color": "#ef4444",
+                "value": 120
+              }
+            ]
+          },
+          "min": 0,
+          "max": 300
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 12,
+        "y": 45
+      },
       "id": 7,
       "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
         "orientation": "auto",
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "textMode": "auto"
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "postgres", "uid": "TimescaleDB" },
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
@@ -299,18 +1094,100 @@
           "rawSql": "SELECT EXTRACT(EPOCH FROM (now() - max(ts)))::int AS \"lag_seconds\" FROM raw_ticks"
         }
       ],
-      "title": "Data Lag (seconds)",
-      "type": "stat"
+      "title": "Data Freshness",
+      "type": "gauge"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "decimals": 1,
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 30,
+            "showPoints": "never",
+            "spanNulls": false,
+            "gradientMode": "opacity",
+            "lineInterpolation": "smooth"
+          },
+          "color": {
+            "fixedColor": "#06b6d4",
+            "mode": "fixed"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "#22c55e",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 16,
+        "y": 45
+      },
+      "id": 14,
+      "options": {
+        "legend": {
+          "displayMode": "hidden",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "refId": "A",
+          "rawSql": "SELECT\n  time_bucket('1 minute', ts) AS \"time\",\n  count(*)::float / 60.0 as tps\nFROM raw_ticks\nWHERE ts > now() - interval '1 hour'\nGROUP BY 1\nORDER BY 1"
+        }
+      ],
+      "title": "Ingestion Rate (trades/sec)",
+      "type": "timeseries"
     }
   ],
   "refresh": "5s",
   "schemaVersion": 39,
-  "tags": ["hqt", "phase2"],
+  "tags": [
+    "hqt",
+    "phase2",
+    "trading"
+  ],
   "templating": {
     "list": [
       {
-        "current": { "selected": true, "text": "BTC/USD", "value": "BTC/USD" },
-        "datasource": { "type": "postgres", "uid": "TimescaleDB" },
+        "current": {
+          "selected": true,
+          "text": "BTC/USD",
+          "value": "BTC/USD"
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "TimescaleDB"
+        },
         "definition": "SELECT DISTINCT symbol FROM raw_ticks",
         "hide": 0,
         "includeAll": false,
@@ -325,16 +1202,36 @@
         "type": "query"
       },
       {
-        "current": { "selected": true, "text": "ohlcv_1m", "value": "ohlcv_1m" },
+        "current": {
+          "selected": true,
+          "text": "ohlcv_1m",
+          "value": "ohlcv_1m"
+        },
         "hide": 0,
         "includeAll": false,
         "multi": false,
         "name": "interval",
         "options": [
-          { "selected": true,  "text": "ohlcv_1m",  "value": "ohlcv_1m" },
-          { "selected": false, "text": "ohlcv_5m",  "value": "ohlcv_5m" },
-          { "selected": false, "text": "ohlcv_15m", "value": "ohlcv_15m" },
-          { "selected": false, "text": "ohlcv_1h",  "value": "ohlcv_1h" }
+          {
+            "selected": true,
+            "text": "ohlcv_1m",
+            "value": "ohlcv_1m"
+          },
+          {
+            "selected": false,
+            "text": "ohlcv_5m",
+            "value": "ohlcv_5m"
+          },
+          {
+            "selected": false,
+            "text": "ohlcv_15m",
+            "value": "ohlcv_15m"
+          },
+          {
+            "selected": false,
+            "text": "ohlcv_1h",
+            "value": "ohlcv_1h"
+          }
         ],
         "query": "ohlcv_1m,ohlcv_5m,ohlcv_15m,ohlcv_1h",
         "skipUrlSync": false,
@@ -342,11 +1239,14 @@
       }
     ]
   },
-  "time": { "from": "now-6h", "to": "now" },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
   "timepicker": {},
   "timezone": "",
   "title": "HQT Main Dashboard",
   "uid": "hqt_main",
-  "version": 4,
+  "version": 5,
   "weekStart": ""
 }

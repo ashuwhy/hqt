@@ -44,12 +44,13 @@ def _make_lob_format(symbol: str, price: float, qty: float, side: str, ts_epoch_
 
     This way the existing kafka_consumer.py can ingest it without changes.
     """
+    is_buy = side.lower() in ("b", "buy")
     return json.dumps({
         "ts": ts_epoch_ns,
         "symbol": symbol,
         "price": price,
         "qty": qty,
-        "liquidity_side": "Bid" if side == "b" else "Ask",
+        "liquidity_side": "Bid" if is_buy else "Ask",
         "passive_id": trade_id,
         "taker_id": trade_id + 1,
     })
