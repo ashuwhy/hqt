@@ -3,15 +3,20 @@ Benchmark: TimescaleDB hypertable vs plain PostgreSQL — on REAL market data.
 
 Always reads from raw_ticks (populated by fetch_real_data.py with real Kraken
 trades) and copies that data into a temporary plain table for comparison.
-No synthetic data is ever generated here.
+If raw_ticks has fewer than 10,000 rows, auto-runs gen_ticks.py with 100k
+synthetic rows so the benchmark has meaningful data to work with.
 
 Usage:
     python -m module2_timescale.bench_timescale
+    python -m module2_timescale.bench_timescale --quick
 """
 
+import argparse
 import csv
 import os
 import statistics
+import subprocess
+import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -29,8 +34,45 @@ PG_DSN = (
 )
 
 BENCH_DIR = Path(__file__).parent / "bench_out"
-N_TRIALS = 10
 WINDOW = "3 days"     # query window used for both plain and hypertable queries
+MIN_ROWS = 10_000     # auto-seed threshold
+AUTO_SEED_ROWS = 100_000
+
+
+# ─── CLI ──────────────────────────────────────────────────────────────────────
+
+def _parse_args() -> argparse.Namespace:
+    p = argparse.ArgumentParser(description="Benchmark TimescaleDB hypertable vs plain PostgreSQL.")
+    p.add_argument(
+        "--quick",
+        action="store_true",
+        help="Run 3 iterations instead of 10 (for CI / fast feedback)",
+    )
+    return p.parse_args()
+
+
+# ─── Auto-seed ────────────────────────────────────────────────────────────────
+
+def _auto_seed(n_rows: int = AUTO_SEED_ROWS) -> None:
+    """
+    Invoke gen_ticks.py as a subprocess to populate raw_ticks with synthetic data.
+    Exits with a non-zero code if the seed step fails.
+    """
+    print(
+        f"raw_ticks has fewer than {MIN_ROWS:,} rows. "
+        f"Auto-seeding {n_rows:,} synthetic rows via gen_ticks.py..."
+    )
+    cmd = [
+        sys.executable, "-m", "module2_timescale.gen_ticks",
+        "--rows", str(n_rows),
+        "--symbols", "BTC/USD,ETH/USD",
+        "--batch-size", "5000",
+    ]
+    result = subprocess.run(cmd, check=False)
+    if result.returncode != 0:
+        print(f"ERROR: gen_ticks.py exited with code {result.returncode}. Aborting benchmark.")
+        sys.exit(result.returncode)
+    print(f"Auto-seed complete.")
 
 
 # ─── Create plain comparison table ───────────────────────────────────────────
@@ -115,6 +157,7 @@ def _write_benchmark_run(
     plain_times: list,
     hyper_times: list,
     row_count: int,
+    n_trials: int,
 ) -> None:
     plain_avg = statistics.mean(plain_times)
     hyper_avg = statistics.mean(hyper_times)
@@ -129,54 +172,124 @@ def _write_benchmark_run(
         """,
         (
             "bench_timescale.py",
-            f"3-day OHLCV (hypertable vs plain) — {row_count:,} real rows",
-            0, 1, N_TRIALS * 2, N_TRIALS * 2, 0, 0,
+            "raw_ticks vs raw_ticks_plain",
+            0, 1, n_trials * 2, n_trials * 2, 0, 0,
             hyper_avg,
             hyper_p99,
             (
-                f"Real Kraken data ({row_count:,} rows, window={WINDOW}) | "
+                f"hypertable speedup: {speedup:.1f}x | "
+                f"Real/synthetic data ({row_count:,} rows, window={WINDOW}) | "
                 f"Plain avg={plain_avg:.1f}ms | "
-                f"Hyper avg={hyper_avg:.2f}ms | "
-                f"Speedup={speedup:.1f}x"
+                f"Hyper avg={hyper_avg:.2f}ms"
             ),
         ),
     )
     conn.commit()
 
 
+# ─── Chart ────────────────────────────────────────────────────────────────────
+
+def _save_chart(
+    plain_times: list[float],
+    hyper_times: list[float],
+    copied: int,
+    speedup: float,
+    n_trials: int,
+) -> Path:
+    plain_avg = statistics.mean(plain_times)
+    hyper_avg = statistics.mean(hyper_times)
+
+    fig, ax = plt.subplots(figsize=(11, 6))
+    trials = list(range(1, n_trials + 1))
+
+    plain_bars = ax.bar(
+        [t - 0.2 for t in trials], plain_times, 0.4,
+        label=f"Plain PostgreSQL (avg {plain_avg:.0f} ms)", color="#e74c3c", alpha=0.9,
+    )
+    hyper_bars = ax.bar(
+        [t + 0.2 for t in trials], hyper_times, 0.4,
+        label=f"TimescaleDB hypertable (avg {hyper_avg:.1f} ms)", color="#2ecc71", alpha=0.9,
+    )
+
+    # Label speedup ratio on each pair of bars
+    for i, (pt, ht) in enumerate(zip(plain_times, hyper_times)):
+        ratio = pt / max(ht, 0.001)
+        x_pos = trials[i]  # centre between the two bars
+        y_pos = max(pt, ht) * 1.03
+        ax.text(
+            x_pos, y_pos, f"{ratio:.1f}×",
+            ha="center", va="bottom", fontsize=7.5, color="#2c3e50",
+        )
+
+    ax.set_xlabel("Trial")
+    ax.set_ylabel("Latency (ms)")
+    ax.set_title(
+        f"TimescaleDB Hypertable vs Plain PostgreSQL — OHLCV Range Query ({WINDOW})\n"
+        f"{copied:,} rows  |  Overall speedup: {speedup:.1f}×"
+    )
+    ax.legend()
+    ax.set_xticks(trials)
+    fig.tight_layout()
+
+    png_path = BENCH_DIR / "benchmark_timescale.png"
+    fig.savefig(png_path, dpi=150)
+    plt.close(fig)
+    return png_path
+
+
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 def main() -> None:
+    args = _parse_args()
+    n_trials = 3 if args.quick else 10
+
     BENCH_DIR.mkdir(parents=True, exist_ok=True)
     conn = psycopg.connect(PG_DSN)
     sym = "BTC/USD"
 
-    # Guard: make sure real data is loaded
+    # Guard: ensure raw_ticks has enough rows; auto-seed with synthetic data if not
     with conn.cursor() as cur:
-        cur.execute("SELECT count(*) FROM raw_ticks WHERE symbol = %s", (sym,))
-        real_rows = cur.fetchone()[0]
+        cur.execute("SELECT count(*) FROM raw_ticks")
+        total_rows = cur.fetchone()[0]
+
+    if total_rows < MIN_ROWS:
+        conn.close()
+        _auto_seed(AUTO_SEED_ROWS)
+        # Reconnect after seeding
+        conn = psycopg.connect(PG_DSN)
+        with conn.cursor() as cur:
+            cur.execute("SELECT count(*) FROM raw_ticks WHERE symbol = %s", (sym,))
+            real_rows = cur.fetchone()[0]
+    else:
+        with conn.cursor() as cur:
+            cur.execute("SELECT count(*) FROM raw_ticks WHERE symbol = %s", (sym,))
+            real_rows = cur.fetchone()[0]
+
     if real_rows == 0:
-        print("x raw_ticks is empty! Run fetch_real_data.py first to load Kraken data.")
+        print(
+            f"raw_ticks has {total_rows:,} total rows but none for {sym}. "
+            "Run fetch_real_data.py or gen_ticks.py with --symbols BTC/USD."
+        )
         conn.close()
         return
-    print(f"✓ raw_ticks has {real_rows:,} real rows for {sym}")
+    print(f"raw_ticks has {real_rows:,} rows for {sym}")
 
     # Create plain table and fill with real data
     _create_plain_table(conn)
     copied = _fill_plain_from_real(conn, WINDOW)
-    print(f"✓ Copied {copied:,} rows into raw_ticks_plain (window = {WINDOW})")
+    print(f"Copied {copied:,} rows into raw_ticks_plain (window = {WINDOW})")
 
     if copied == 0:
-        print(f"⚠ No rows found in the last {WINDOW}. Re-run fetch_real_data.py to refresh.")
+        print(f"No rows found in the last {WINDOW}. Re-run fetch_real_data.py or gen_ticks.py to refresh.")
         conn.close()
         return
 
     # Run benchmark
-    print(f"\nRunning {WINDOW} OHLCV query {N_TRIALS}× on each (real data)...")
+    print(f"\nRunning {WINDOW} OHLCV query {n_trials}x on each (plain vs hypertable)...")
     plain_times: list[float] = []
     hyper_times: list[float] = []
 
-    for i in range(N_TRIALS):
+    for i in range(n_trials):
         pt = _run_plain(conn, sym, WINDOW)
         ht = _run_hyper(conn, sym, WINDOW)
         plain_times.append(pt)
@@ -190,10 +303,10 @@ def main() -> None:
     speedup   = plain_avg / max(hyper_avg, 0.001)
 
     print(f"\n{'='*52}")
-    print(f"  Dataset:     {copied:,} real Kraken rows  (window={WINDOW})")
+    print(f"  Dataset:     {copied:,} rows  (window={WINDOW})")
     print(f"  Plain PG:    avg={plain_avg:.2f}ms   p99={plain_p99:.2f}ms")
     print(f"  Hypertable:  avg={hyper_avg:.2f}ms   p99={hyper_p99:.2f}ms")
-    print(f"  Speedup:     {speedup:.1f}×")
+    print(f"  Speedup:     {speedup:.1f}x")
     print(f"{'='*52}")
 
     # Save CSV
@@ -205,29 +318,13 @@ def main() -> None:
             w.writerow([i + 1, f"{pt:.3f}", f"{ht:.3f}"])
     print(f"Saved {csv_path}")
 
-    # Save chart
-    fig, ax = plt.subplots(figsize=(11, 6))
-    trials = list(range(1, N_TRIALS + 1))
-    ax.bar([t - 0.2 for t in trials], plain_times, 0.4,
-           label=f"Plain PostgreSQL (avg {plain_avg:.0f}ms)", color="#e74c3c", alpha=0.9)
-    ax.bar([t + 0.2 for t in trials], hyper_times, 0.4,
-           label=f"TimescaleDB hypertable (avg {hyper_avg:.1f}ms)", color="#2ecc71", alpha=0.9)
-    ax.set_xlabel("Trial")
-    ax.set_ylabel("Latency (ms)")
-    ax.set_title(
-        f"OHLCV Range Query ({WINDOW}) — Real Kraken Data\n"
-        f"{copied:,} rows  |  Speedup: {speedup:.1f}×"
-    )
-    ax.legend()
-    ax.set_xticks(trials)
-    fig.tight_layout()
-    png_path = BENCH_DIR / "benchmark_timescale.png"
-    fig.savefig(png_path, dpi=150)
+    # Save chart at 150 DPI with speedup labels on bars
+    png_path = _save_chart(plain_times, hyper_times, copied, speedup, n_trials)
     print(f"Saved {png_path}")
 
     # Persist to DB
-    _write_benchmark_run(conn, plain_times, hyper_times, copied)
-    print("✓ Benchmark summary written to benchmark_runs table")
+    _write_benchmark_run(conn, plain_times, hyper_times, copied, n_trials)
+    print("Benchmark summary written to benchmark_runs table")
 
     # Cleanup temp table
     conn.execute("DROP TABLE IF EXISTS raw_ticks_plain CASCADE")
