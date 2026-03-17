@@ -26,7 +26,6 @@ from typing import Any
 
 import httpx
 import psycopg
-import requests
 from prometheus_client import Gauge
 
 logger = logging.getLogger(__name__)
@@ -195,7 +194,7 @@ async def _refresh_fiat_cache(client: httpx.AsyncClient) -> None:
                     f"&from_currency=USD&to_currency={ccy}"
                     f"&apikey={ALPHA_VANTAGE_KEY}"
                 )
-                resp = requests.get(url, timeout=10)
+                resp = await client.get(url, timeout=10.0)
                 if resp.status_code == 200:
                     data = resp.json()
                     info = data.get("Realtime Currency Exchange Rate", {})
@@ -204,7 +203,7 @@ async def _refresh_fiat_cache(client: httpx.AsyncClient) -> None:
                         if rate > 0:
                             new_cache[ccy] = rate
                             logger.info("  USD/%s = %.6f (Alpha Vantage)", ccy, rate)
-                time.sleep(1.0)  # Respect rate limit
+                await asyncio.sleep(1.0)  # Respect rate limit (non-blocking)
             except Exception as exc:
                 logger.debug("Alpha Vantage USD/%s failed: %s", ccy, exc)
 
@@ -217,7 +216,7 @@ async def _refresh_fiat_cache(client: httpx.AsyncClient) -> None:
     try:
         targets = ",".join(FIAT_CURRENCIES)
         url = f"https://api.frankfurter.app/latest?from=USD&to={targets}"
-        resp = requests.get(url, timeout=10)
+        resp = await client.get(url, timeout=10.0)
         if resp.status_code == 200:
             data = resp.json()
             _fiat_cache = data.get("rates", {})

@@ -172,7 +172,7 @@ public:
 
   void handleNewConnection(const HttpRequestPtr &req,
                            const WebSocketConnectionPtr &conn) override {
-    const std::string &sym = req->getPathParameter("symbol");
+    const std::string &sym = req->getParameter("symbol");
     if (sym.empty()) {
       conn->forceClose();
       return;
@@ -538,10 +538,8 @@ int main() {
       },
       {Get});
 
-  // WebSocket routes are registered by the controller's WS_PATH_ADD macro;
-  // no explicit registerHandler call is needed for DepthStreamController.
-  app().registerWebSocketController<DepthStreamController>();
-
+  // WebSocket routes are registered at static init by the controller's
+  // WS_PATH_ADD macro; no explicit registration in main() is needed.
   app().setThreadNum(64).addListener("0.0.0.0", 8001).run();
   return 0;
 }
