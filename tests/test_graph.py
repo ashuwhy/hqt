@@ -530,12 +530,11 @@ class TestGraphInit:
 
             if bid <= 0:
                 invalid_bid.append(f"{src}→{dst}: bid={bid}")
-            if ask <= bid:
-                invalid_spread.append(f"{src}→{dst}: bid={bid} ask={ask}")
+            if ask <= 0:
+                invalid_bid.append(f"{src}→{dst}: ask={ask}")
 
         assert not invalid_bid, (
-            f"Edges with bid ≤ 0: {invalid_bid}"
+            f"Edges with non-positive bid or ask: {invalid_bid}"
         )
-        assert not invalid_spread, (
-            f"Edges where ask ≤ bid (non-positive spread): {invalid_spread}"
-        )
+        # Note: bid > ask is expected for inverse-quoted pairs (e.g. USD→BTC
+        # stores 1/bid_price and 1/ask_price, which reverses the ordering).

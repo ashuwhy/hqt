@@ -166,7 +166,7 @@
           "rawSql": "SELECT\n  bucket AS \"time\",\n  open,\n  high,\n  low,\n  close,\n  volume,\n  AVG(close) OVER(ORDER BY bucket ROWS BETWEEN 19 PRECEDING AND CURRENT ROW) as sma20,\n  AVG(close) OVER(ORDER BY bucket ROWS BETWEEN 49 PRECEDING AND CURRENT ROW) as sma50\nFROM ${interval:raw}\nWHERE\n  $__timeFilter(bucket)\n  AND symbol = '${symbol}'\nORDER BY 1"
         }
       ],
-      "title": "Price OHLCV + SMA — ${symbol}  [${interval}]",
+      "title": "Price OHLCV + SMA \u2014 ${symbol}  [${interval}]",
       "type": "candlestick"
     },
     {
@@ -244,7 +244,7 @@
           "rawSql": "WITH changes AS (\n  SELECT\n    bucket as time,\n    close - LAG(close) OVER (ORDER BY bucket) as change\n  FROM ${interval:raw}\n  WHERE symbol = '${symbol}' AND $__timeFilter(bucket)\n),\ngains_losses AS (\n  SELECT\n    time,\n    CASE WHEN change > 0 THEN change ELSE 0 END as gain,\n    CASE WHEN change < 0 THEN -change ELSE 0 END as loss\n  FROM changes\n),\navg_gains_losses AS (\n  SELECT\n    time,\n    AVG(gain) OVER (ORDER BY time ROWS BETWEEN 13 PRECEDING AND CURRENT ROW) as avg_gain,\n    AVG(loss) OVER (ORDER BY time ROWS BETWEEN 13 PRECEDING AND CURRENT ROW) as avg_loss\n  FROM gains_losses\n)\nSELECT\n  time,\n  CASE \n    WHEN avg_loss = 0 THEN 100 \n    ELSE 100 - (100 / (1 + (avg_gain / avg_loss))) \n  END as rsi\nFROM avg_gains_losses\nORDER BY time"
         }
       ],
-      "title": "RSI (14) — ${symbol}",
+      "title": "RSI (14) \u2014 ${symbol}",
       "type": "timeseries"
     },
     {
@@ -351,7 +351,7 @@
           "rawSql": "SELECT\n  time_bucket('1 minute', ts) AS \"time\",\n  SUM(CASE WHEN side = 'B' THEN volume ELSE 0 END) as buy_volume,\n  SUM(CASE WHEN side = 'S' THEN volume ELSE 0 END) as sell_volume\nFROM raw_ticks\nWHERE $__timeFilter(ts) AND symbol = '${symbol}'\nGROUP BY 1\nORDER BY 1"
         }
       ],
-      "title": "Volume by Side — ${symbol}",
+      "title": "Volume by Side \u2014 ${symbol}",
       "type": "timeseries"
     },
     {
@@ -441,7 +441,7 @@
           "rawSql": "SELECT\n  SUM(CASE WHEN side = 'B' THEN 1 ELSE 0 END) AS \"Buys\",\n  SUM(CASE WHEN side = 'S' THEN 1 ELSE 0 END) AS \"Sells\"\nFROM raw_ticks\nWHERE $__timeFilter(ts) AND symbol = '${symbol}'"
         }
       ],
-      "title": "Buy / Sell Ratio — ${symbol}",
+      "title": "Buy / Sell Ratio \u2014 ${symbol}",
       "type": "piechart"
     },
     {
@@ -497,7 +497,7 @@
           "rawSql": "SELECT\n  time_bucket('1 minute', ts) AS \"time\",\n  SUM(CASE WHEN side = 'B' THEN volume ELSE -volume END) as imbalance\nFROM raw_ticks\nWHERE $__timeFilter(ts) AND symbol = '${symbol}'\nGROUP BY 1\nORDER BY 1"
         }
       ],
-      "title": "Trade Flow Imbalance — ${symbol}",
+      "title": "Trade Flow Imbalance \u2014 ${symbol}",
       "type": "timeseries"
     },
     {
@@ -567,7 +567,7 @@
           "rawSql": "SELECT\n  time_bucket('1 minute', ts) AS \"time\",\n  SUM(price * volume) / NULLIF(SUM(volume), 0) as vwap\nFROM raw_ticks\nWHERE $__timeFilter(ts) AND symbol = '${symbol}'\nGROUP BY 1\nORDER BY 1"
         }
       ],
-      "title": "VWAP — ${symbol}",
+      "title": "VWAP \u2014 ${symbol}",
       "type": "timeseries"
     },
     {
@@ -641,7 +641,7 @@
           "rawSql": "SELECT\n  bucket AS \"time\",\n  CASE WHEN close > 0 THEN ((high - low) / close) * 100 ELSE 0 END as spread_pct\nFROM ${interval:raw}\nWHERE $__timeFilter(bucket) AND symbol = '${symbol}'\nORDER BY 1"
         }
       ],
-      "title": "Intra-Bar Spread % — ${symbol}",
+      "title": "Intra-Bar Spread % \u2014 ${symbol}",
       "type": "timeseries"
     },
     {
@@ -833,7 +833,7 @@
           "rawSql": "SELECT\n  ts AS \"time\",\n  price,\n  volume,\n  side,\n  exchange\nFROM raw_ticks\nWHERE\n  $__timeFilter(ts)\n  AND symbol = '${symbol}'\nORDER BY ts DESC\nLIMIT 200"
         }
       ],
-      "title": "Recent Trades — ${symbol}",
+      "title": "Recent Trades \u2014 ${symbol}",
       "type": "table"
     },
     {
@@ -1558,10 +1558,10 @@
           "format": "table",
           "rawQuery": true,
           "refId": "A",
-          "rawSql": "SELECT\n  ts,\n  array_to_string(path, ' → ') as cycle_path,\n  profit_pct,\n  circuit_depth,\n  method\nFROM arbitrage_signals\nWHERE $__timeFilter(ts)\n  AND method = 'CLASSICAL'\nORDER BY ts DESC\nLIMIT 100"
+          "rawSql": "SELECT\n  ts,\n  array_to_string(path, ' \u2192 ') as cycle_path,\n  profit_pct,\n  circuit_depth,\n  method\nFROM arbitrage_signals\nWHERE $__timeFilter(ts)\n  AND method = 'CLASSICAL'\nORDER BY ts DESC\nLIMIT 100"
         }
       ],
-      "title": "Recent Arbitrage Signals — Classical (Bellman-Ford)",
+      "title": "Recent Arbitrage Signals \u2014 Classical (Bellman-Ford)",
       "type": "table"
     },
     {
@@ -1699,7 +1699,7 @@
           "rawSql": "WITH expanded AS (\n  SELECT unnest(path[1:array_length(path, 1)-1]) AS asset, profit_pct\n  FROM arbitrage_signals\n  WHERE $__timeFilter(ts)\n    AND method = 'CLASSICAL'\n)\nSELECT\n  asset,\n  count(*) AS appearances,\n  round(avg(profit_pct)::numeric, 4) AS avg_profit\nFROM expanded\nGROUP BY asset\nORDER BY appearances DESC\nLIMIT 20"
         }
       ],
-      "title": "Top Arbitrage Assets (All 20 — Crypto + Fiat)",
+      "title": "Top Arbitrage Assets (All 20 \u2014 Crypto + Fiat)",
       "type": "barchart"
     },
     {
@@ -1760,7 +1760,7 @@
           "format": "table",
           "rawQuery": true,
           "refId": "A",
-          "rawSql": "SELECT\n  count(DISTINCT array_to_string(path, '→')) AS \"Unique Cycles\",\n  count(DISTINCT path[1]) AS \"Assets Involved\",\n  round(avg(circuit_depth)::numeric, 1) AS \"Avg Hops\"\nFROM arbitrage_signals\nWHERE $__timeFilter(ts)\n  AND method = 'CLASSICAL'"
+          "rawSql": "SELECT\n  count(DISTINCT array_to_string(path, '\u2192')) AS \"Unique Cycles\",\n  count(DISTINCT path[1]) AS \"Assets Involved\",\n  round(avg(circuit_depth)::numeric, 1) AS \"Avg Hops\"\nFROM arbitrage_signals\nWHERE $__timeFilter(ts)\n  AND method = 'CLASSICAL'"
         }
       ],
       "title": "Graph Network Activity",
@@ -1904,10 +1904,198 @@
           "format": "table",
           "rawQuery": true,
           "refId": "A",
-          "rawSql": "WITH expanded AS (\n  SELECT unnest(path) AS asset, profit_pct, circuit_depth\n  FROM arbitrage_signals\n  WHERE $__timeFilter(ts)\n    AND method = 'CLASSICAL'\n)\nSELECT\n  asset,\n  CASE\n    WHEN asset IN ('BTC','ETH','LINK','SOL','ADA','XRP','DOGE','AVAX','UNI','DOT') THEN '🪙 Crypto'\n    ELSE '💱 Fiat'\n  END AS type,\n  count(*) AS cycles,\n  round(avg(profit_pct)::numeric, 4) AS avg_profit,\n  round(max(profit_pct)::numeric, 4) AS max_profit,\n  round(avg(circuit_depth)::numeric, 1) AS avg_hops\nFROM expanded\nGROUP BY asset\nORDER BY cycles DESC"
+          "rawSql": "WITH expanded AS (\n  SELECT unnest(path) AS asset, profit_pct, circuit_depth\n  FROM arbitrage_signals\n  WHERE $__timeFilter(ts)\n    AND method = 'CLASSICAL'\n)\nSELECT\n  asset,\n  CASE\n    WHEN asset IN ('BTC','ETH','LINK','SOL','ADA','XRP','DOGE','AVAX','UNI','DOT') THEN '\ud83e\ude99 Crypto'\n    ELSE '\ud83d\udcb1 Fiat'\n  END AS type,\n  count(*) AS cycles,\n  round(avg(profit_pct)::numeric, 4) AS avg_profit,\n  round(max(profit_pct)::numeric, 4) AS max_profit,\n  round(avg(circuit_depth)::numeric, 1) AS avg_hops\nFROM expanded\nGROUP BY asset\nORDER BY cycles DESC"
         }
       ],
       "title": "All Assets in Arbitrage Cycles (Crypto + Fiat)",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "profit_pct"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 4
+              },
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#10b981",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "cycle_path"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 300
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#38bdf8",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "method"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 100
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "applyToRow": false
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "CLASSICAL": {
+                        "text": "CLASSICAL",
+                        "color": "#2196F3",
+                        "index": 0
+                      },
+                      "QUANTUM": {
+                        "text": "QUANTUM",
+                        "color": "#F44336",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "classical_ms"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              },
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "quantum_ms"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "ms"
+              },
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 92
+      },
+      "id": 210,
+      "options": {
+        "footer": {
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "ts",
+            "desc": true
+          }
+        ],
+        "cellHeight": "sm"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "refId": "A",
+          "rawSql": "SELECT\n  ts,\n  array_to_string(path, ' \u2192 ') AS cycle_path,\n  profit_pct,\n  method,\n  circuit_depth,\n  classical_ms,\n  quantum_ms,\n  graph_size_n\nFROM arbitrage_signals\nWHERE $__timeFilter(ts)\nORDER BY ts DESC\nLIMIT 50"
+        }
+      ],
+      "title": "CLASSICAL vs QUANTUM Arbitrage Signals",
+      "description": "Both Bellman-Ford (CLASSICAL, blue) and Grover\u2019s Algorithm (QUANTUM, red) signals. classical_ms = BF runtime; quantum_ms = AerSimulator runtime.",
       "type": "table"
     }
   ],
