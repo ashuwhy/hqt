@@ -12,3 +12,8 @@ asyncio_default_fixture_loop_scope = "function"
 filterwarnings = [
     "ignore::DeprecationWarning",
 ]
+markers = [
+    "integration: tests requiring Docker services (LOB, TimescaleDB, Graph, etc.)",
+    "benchmark: performance benchmarks (may be slow)",
+    "unit: pure-Python unit tests with no external dependencies",
+]

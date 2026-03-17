@@ -8,7 +8,7 @@ These tests cover:
   - quantum_api: HTTP endpoints (in-process, no real DB/simulator required)
 
 Run with:
-    pytest tests/test_quantum.py -v
+    python -m pytest tests/test_quantum.py -v
 """
 from __future__ import annotations
 
@@ -17,6 +17,19 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
+
+pytestmark = pytest.mark.unit
+
+# qiskit_aer is a heavy C++ package — only available in Docker containers.
+# Tests that call run_grover (which uses AerSimulator) are skipped locally.
+try:
+    import qiskit_aer  # noqa: F401
+    HAS_AER = True
+except ImportError:
+    HAS_AER = False
+
+requires_aer = pytest.mark.skipif(not HAS_AER, reason="qiskit_aer not installed")
+
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -30,7 +43,6 @@ def _simple_rates(n: int, base: float = 1.0) -> tuple[dict, list[str]]:
 def _profitable_rates(nodes: list[str]) -> dict:
     """Build a rate matrix with a guaranteed profitable 3-cycle: N0→N1→N2→N0."""
     rates = {(s, d): 1.0 for s in nodes for d in nodes if s != d}
-    # Make N0→N1→N2→N0 profitable: product = 1.1 * 1.1 * 1.1 ≈ 1.331
     rates[("N0", "N1")] = 1.1
     rates[("N1", "N2")] = 1.1
     rates[("N2", "N0")] = 1.1
@@ -77,6 +89,17 @@ class TestGroverOracle:
         qc_two = build_oracle([0, 1], n_qubits=3)
         assert qc_two.depth() >= qc_one.depth()
 
+    # ── New oracle tests ──────────────────────────────────────────────────────
+
+    def test_oracle_marks_multiple_states(self):
+        """Oracle with 4 profitable states should have greater depth than 1 state."""
+        from module4_quantum.grover_oracle import build_oracle
+        qc_1 = build_oracle([0], n_qubits=4)
+        qc_4 = build_oracle([0, 1, 2, 3], n_qubits=4)
+        assert qc_4.depth() >= qc_1.depth(), (
+            f"Oracle with 4 states (depth={qc_4.depth()}) should be ≥ 1 state (depth={qc_1.depth()})"
+        )
+
 
 # ─── Grover Diffuser tests ────────────────────────────────────────────────────
 
@@ -105,6 +128,17 @@ class TestGroverDiffuser:
         from module4_quantum.grover_diffuser import build_diffuser
         with pytest.raises(ValueError):
             build_diffuser(0)
+
+    # ── New diffuser test ─────────────────────────────────────────────────────
+
+    def test_diffuser_symmetry(self):
+        """Diffuser for same n_qubits must always produce same depth."""
+        from module4_quantum.grover_diffuser import build_diffuser
+        d1 = build_diffuser(3)
+        d2 = build_diffuser(3)
+        assert d1.depth() == d2.depth(), (
+            f"Same n_qubits should give same depth: {d1.depth()} vs {d2.depth()}"
+        )
 
 
 # ─── run_grover tests ─────────────────────────────────────────────────────────
@@ -137,7 +171,7 @@ class TestRunGrover:
 
     def test_is_profitable_missing_edge(self):
         from module4_quantum.run_grover import is_profitable
-        rates = {("A", "B"): 1.5}  # missing B→C and C→A
+        rates = {("A", "B"): 1.5}
         assert is_profitable(("A", "B", "C"), rates) is False
 
     def test_run_grover_too_few_nodes(self):
@@ -155,19 +189,19 @@ class TestRunGrover:
         assert result["path"] is None
         assert result["n_profitable"] == 0
 
+    @requires_aer
     def test_run_grover_returns_path_when_profitable(self):
         """With a guaranteed profitable 3-cycle, run_grover must return a path."""
         from module4_quantum.run_grover import run_grover
         nodes = ["N0", "N1", "N2", "N3"]
         rates = _profitable_rates(nodes)
         result = run_grover(rates, nodes, shots=256)
-        # A path is returned (may not be the optimal one due to shot noise)
         assert result["n_profitable"] >= 1
-        # Result dict has all required keys
         for key in ("path", "profit_pct", "circuit_depth", "n_qubits", "n_iter",
                     "n_cycles", "n_profitable", "shots", "counts_top5"):
             assert key in result, f"Missing key: {key}"
 
+    @requires_aer
     def test_run_grover_circuit_metadata(self):
         """Circuit metadata (n_qubits, circuit_depth, n_iter) must be positive ints."""
         from module4_quantum.run_grover import run_grover
@@ -182,13 +216,70 @@ class TestRunGrover:
     def test_run_grover_cycle_cap(self):
         """n_cycles reported is capped at _MAX_CYCLES (32768)."""
         from module4_quantum.run_grover import run_grover, _MAX_CYCLES
-        # With many nodes, P(N,3) would exceed the cap
-        # Use a modest size that fits in memory but check cap logic
         nodes = [f"N{i}" for i in range(10)]
         rates, _ = _simple_rates(10)
         result = run_grover(rates, nodes, shots=32)
-        # P(10,3) = 720 < 32768, so n_cycles == 720
         assert result["n_cycles"] == 10 * 9 * 8
+
+    # ── New run_grover tests ──────────────────────────────────────────────────
+
+    @requires_aer
+    def test_run_grover_deterministic_high_profit(self):
+        """With massive profitable cycle (rates=1.5), detection is guaranteed."""
+        from module4_quantum.run_grover import run_grover
+        nodes = ["A", "B", "C"]
+        rates = {(s, d): 1.5 for s in nodes for d in nodes if s != d}
+        result = run_grover(rates, nodes, shots=512)
+        assert result["n_profitable"] > 0
+        assert result["path"] is not None, "All cycles are profitable, must detect one"
+
+    @requires_aer
+    def test_run_grover_profit_calculation_accuracy(self):
+        """Verify returned profit_pct matches manual calculation."""
+        from module4_quantum.run_grover import run_grover
+        nodes = ["N0", "N1", "N2", "N3"]
+        rates = _profitable_rates(nodes)
+        result = run_grover(rates, nodes, shots=512)
+        if result["path"] is not None:
+            path = result["path"]
+            # Manually compute profit for the returned path
+            product = 1.0
+            for i in range(len(path) - 1):
+                product *= rates.get((path[i], path[i + 1]), 1.0)
+            expected_profit = (product - 1.0) * 100.0
+            assert abs(result["profit_pct"] - expected_profit) < 0.01, (
+                f"profit_pct={result['profit_pct']} vs expected={expected_profit}"
+            )
+
+    def test_enumerate_cycles_k2(self):
+        """k=2 gives P(N, 2) 2-permutations."""
+        from module4_quantum.run_grover import enumerate_cycles
+        cycles = enumerate_cycles(["A", "B", "C"], k=2)
+        assert len(cycles) == 3 * 2  # P(3, 2) = 6
+        assert all(len(c) == 2 for c in cycles)
+
+    def test_is_profitable_reverse_cycle(self):
+        """A→B→C profitable doesn't imply C→B→A is profitable."""
+        from module4_quantum.run_grover import is_profitable
+        rates = {
+            ("A", "B"): 1.2, ("B", "C"): 1.2, ("C", "A"): 1.2,
+            ("C", "B"): 0.7, ("B", "A"): 0.7, ("A", "C"): 0.7,
+        }
+        forward = is_profitable(("A", "B", "C"), rates)
+        reverse = is_profitable(("C", "B", "A"), rates)
+        assert forward is True, "Forward cycle should be profitable"
+        assert reverse is False, "Reverse cycle should not be profitable"
+
+    @requires_aer
+    def test_run_grover_shots_parameter(self):
+        """Different shot counts should still detect the profitable cycle."""
+        from module4_quantum.run_grover import run_grover
+        nodes = ["N0", "N1", "N2"]
+        rates = {(s, d): 1.3 for s in nodes for d in nodes if s != d}
+        for shots in [32, 128, 512]:
+            result = run_grover(rates, nodes, shots=shots)
+            assert result["shots"] == shots
+            assert result["n_profitable"] > 0
 
 
 # ─── quantum_api tests ────────────────────────────────────────────────────────
@@ -248,3 +339,16 @@ class TestQuantumAPI:
         data = resp.json()
         assert data["available"] is False
         assert data["rows"] == []
+
+    # ── New API test ──────────────────────────────────────────────────────────
+
+    @pytest.mark.asyncio
+    async def test_quantum_api_health_contains_all_keys(self, client):
+        """Health endpoint must return all expected keys."""
+        resp = await client.get("/health")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "status" in data
+        assert "module" in data
+        assert isinstance(data["status"], str)
+        assert isinstance(data["module"], str)
