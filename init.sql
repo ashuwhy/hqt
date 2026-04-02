@@ -193,5 +193,6 @@ CREATE TABLE IF NOT EXISTS benchmark_quantum_results (
     n_qubits       INT,
     circuit_depth  INT,
     n_iter         INT,
-    inserted_at    TIMESTAMPTZ DEFAULT NOW()
+    inserted_at    TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (benchmark_type, n_nodes)
 );
