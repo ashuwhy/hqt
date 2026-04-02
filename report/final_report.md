@@ -99,6 +99,12 @@ Siege was run with 200 concurrent users for 30 seconds against a mix of place-or
 
 Prometheus metric `lob_order_latency_ms` histogram (captured during Siege) confirmed the p99 target. Results logged to `report/siege_ddos_results.txt`.
 
+### 2.5 Kafka Integration
+
+The LOB engine produces to the `executed_trades` Kafka topic using librdkafka's native C++ producer. Each matched trade is serialised as a JSON message containing `{symbol, price, volume, side, order_id, trade_id, ts}` and published with symbol as the partition key, ensuring all trades for a given symbol land on the same partition and are consumed in order by Module 2's ingestor.
+
+The Kafka `raw_orders` consumer is configured with `auto.offset.reset=earliest` and `enable.auto.commit=false`. Offsets are committed only after the matching engine has successfully processed the batch, providing at-least-once delivery semantics. This means a restart after a crash will re-process the last uncommitted batch — acceptable for a trading system where duplicate order attempts are idempotent (re-submitted orders with the same `client_id` are rejected by the book).
+
 ---
 
 ## Chapter 3 — Module 2: TimescaleDB Analytics
@@ -207,6 +213,27 @@ At 20 nodes with ~380 edges, a single Bellman-Ford run completes in **<5ms** inc
   "ts": "2026-04-03T14:22:01Z"
 }
 ```
+
+### 4.4 Cypher Query Interface
+
+Apache AGE exposes a Cypher query interface through PostgreSQL functions. The graph API provides four analytical endpoints backed by Cypher queries:
+
+**3-hop cycle finder** — finds all profitable directed triangles from a given asset:
+```cypher
+MATCH p = (start:Asset {symbol: $from})-[:EXCHANGE*3]->(start)
+WHERE ALL(r IN relationships(p) WHERE r.bid > 0)
+RETURN [n IN nodes(p) | n.symbol] AS path,
+       reduce(prod=1.0, r IN relationships(p) | prod * r.bid) AS product
+ORDER BY product DESC LIMIT 10
+```
+
+**Shortest arbitrage path** — most profitable route between two assets using bid rates as weights.
+
+**High-spread edge detector** — identifies pairs with abnormally wide bid-ask spreads, useful for filtering out illiquid edges before running Bellman-Ford.
+
+**Crypto subgraph** — isolates the 10-node crypto subgraph for faster cycle detection when fiat pairs are excluded from the analysis window.
+
+These Cypher queries run inside PostgreSQL transactions alongside standard SQL, which allows a single database round-trip to both detect an arbitrage opportunity and log it to `arbitrage_signals`.
 
 ---
 
@@ -327,6 +354,8 @@ The integration test suite (`tests/test_integration_e2e.py`) verifies cross-modu
 HQT demonstrates that a polyglot database architecture — combining TimescaleDB hypertables, Apache AGE graph traversal, Redis atomic counters, and PostgreSQL as a common persistence layer — can support a high-throughput trading system with sub-millisecond latency at each layer.
 
 The central research result is the classical-vs-quantum comparison. Bellman-Ford's deterministic O(V·E) complexity makes it the unambiguous production choice for arbitrage detection at the scale of a 20-node FX graph: it completes in <5ms and runs every 500ms continuously. The Grover benchmark quantifies the overhead of near-term quantum simulation: AerSimulator's state-vector model imposes a 5,848× slowdown at N=32 compared to Bellman-Ford. This is not a failure of the quantum algorithm — it is a measurement of the cost of classical state-vector simulation. On fault-tolerant quantum hardware with native MCX gate support, the same Grover circuit would achieve O(√N) oracle calls, providing a quadratic speedup over any classical search.
+
+The polyglot architecture also validates the choice of PostgreSQL as a unifying substrate. TimescaleDB, Apache AGE, and the standard relational tables for orders, trades, and security events all co-exist in a single PostgreSQL 16 instance. This eliminates cross-database synchronisation complexity: a Bellman-Ford signal, a TimescaleDB OHLCV aggregate, and a security event can be joined in a single query without ETL. For a five-module system built by a team of five over eight weeks, the operational simplicity of one database process outweighs the marginal performance gains of purpose-built graph or time-series databases running as separate services.
 
 ---
 
