@@ -380,11 +380,10 @@ def main() -> None:
 
     # 3. Find the new max y to append quantum + security rows
     max_y = max(p["gridPos"]["y"] + p["gridPos"]["h"] for p in panels)
-    q_panels = quantum_row(max_y)
-    panels.extend(q_panels)
+    panels.extend(quantum_row(max_y))
 
-    q_max_y = max(p["gridPos"]["y"] + p["gridPos"]["h"] for p in q_panels)
-    panels.extend(security_row(q_max_y))
+    sec_base_y = max(p["gridPos"]["y"] + p["gridPos"]["h"] for p in panels)
+    panels.extend(security_row(sec_base_y))
 
     data["panels"] = panels
     DASHBOARD.write_text(json.dumps(data, indent=2))
