@@ -26,7 +26,7 @@ INSERT INTO benchmark_quantum_results
     (benchmark_type, n_nodes, bf_mean_ms, bf_p99_ms,
      grover_mean_ms, grover_p99_ms, n_qubits, circuit_depth, n_iter)
 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
-ON CONFLICT DO NOTHING
+ON CONFLICT (benchmark_type, n_nodes) DO NOTHING
 """
 
 def seed_quantum(conn: psycopg.Connection) -> int:
@@ -67,6 +67,9 @@ def seed_timescale(conn: psycopg.Connection) -> int:
 
 
 def main() -> None:
+    for csv_path in (QUANTUM_CSV, TIMESCALE_CSV):
+        if not csv_path.exists():
+            sys.exit(f"ERROR: CSV not found: {csv_path}\nRun the benchmark script first.")
     print(f"Connecting to {PG_DSN[:40]}...")
     with psycopg.connect(PG_DSN, autocommit=True) as conn:
         q = seed_quantum(conn)
