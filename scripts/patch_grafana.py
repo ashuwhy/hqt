@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-DASHBOARD = Path("module5_security/grafana_provisioning/dashboards/hqt_main.json")
+DASHBOARD = Path(__file__).parent.parent / "module5_security/grafana_provisioning/dashboards/hqt_main.json"
 HERO_SHIFT = 4   # rows added at top (1 row header + 3 stat height)
 HERO_ROW_ID = 99
 
@@ -22,11 +22,10 @@ def already_patched(panels: list) -> bool:
     return any(p.get("id") == HERO_ROW_ID for p in panels)
 
 
-def shift_panels(panels: list, dy: int) -> list:
+def shift_panels(panels: list, dy: int) -> None:
     for p in panels:
         if "gridPos" in p:
             p["gridPos"]["y"] += dy
-    return panels
 
 
 # ── Hero row definition ────────────────────────────────────────────────────
