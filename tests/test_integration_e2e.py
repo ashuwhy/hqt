@@ -112,8 +112,6 @@ async def test_e2e_quantum_health_from_proxy(proxy_client: httpx.AsyncClient):
 async def test_e2e_analytics_health_from_proxy(proxy_client: httpx.AsyncClient):
     """Security proxy → data-ingestor /analytics/health must return 200."""
     resp = await proxy_client.get("/analytics/health")
-    if resp.status_code == 502:
-        pytest.skip("data-ingestor not reachable through proxy — skipping")
     assert resp.status_code == 200, (
         f"Analytics health through proxy returned {resp.status_code}: {resp.text}\n"
         f"Check that module5_security/main.py routes /analytics/* to data-ingestor:8002"
@@ -123,7 +121,7 @@ async def test_e2e_analytics_health_from_proxy(proxy_client: httpx.AsyncClient):
 async def test_e2e_full_arbitrage_signal_flow(db_conn: psycopg.Connection):
     """
     Verify that arbitrage_signals table exists and is queryable.
-    If the Bellman-Ford detector has been running, there should be ≥0 CLASSICAL signals.
+    If the Bellman-Ford detector has been running, there should be ≥1 CLASSICAL signals.
     """
     with db_conn.cursor() as cur:
         cur.execute(
@@ -136,7 +134,7 @@ async def test_e2e_full_arbitrage_signal_flow(db_conn: psycopg.Connection):
 
     assert row is not None, "arbitrage_signals query returned no row"
     count = int(row[0])
-    # The table exists and is queryable — count may be 0 if detector hasn't run
+    # The table must have at least one CLASSICAL signal — the detector runs every 500ms
     assert count > 0, (
         f"No CLASSICAL signals in arbitrage_signals after waiting — "
         f"Bellman-Ford detector may not be running (count={count})"
