@@ -180,3 +180,18 @@ SELECT add_compression_policy('raw_ticks', INTERVAL '7 days', if_not_exists => T
 
 -- Retention policy for raw_ticks
 SELECT add_retention_policy('raw_ticks', INTERVAL '90 days', if_not_exists => TRUE);
+
+-- ── Benchmark results (queryable by Grafana) ──────────────────────────────
+CREATE TABLE IF NOT EXISTS benchmark_quantum_results (
+    id             SERIAL PRIMARY KEY,
+    benchmark_type TEXT    NOT NULL,          -- 'quantum' | 'timescale'
+    n_nodes        INT,                       -- quantum: graph size; NULL for timescale rows
+    bf_mean_ms     NUMERIC,                   -- quantum: BF avg ms; timescale: hypertable avg ms
+    bf_p99_ms      NUMERIC,                   -- quantum: BF p99; timescale: hypertable p99
+    grover_mean_ms NUMERIC,                   -- quantum: Grover avg ms; timescale: plain avg ms
+    grover_p99_ms  NUMERIC,                   -- quantum: Grover p99; timescale: plain p99
+    n_qubits       INT,
+    circuit_depth  INT,
+    n_iter         INT,
+    inserted_at    TIMESTAMPTZ DEFAULT NOW()
+);
