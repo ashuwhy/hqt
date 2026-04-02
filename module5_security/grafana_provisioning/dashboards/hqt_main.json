@@ -23,12 +23,390 @@
   "liveNow": true,
   "panels": [
     {
+      "id": 99,
+      "type": "row",
+      "title": "\u26a1 System Overview",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 301,
+      "type": "stat",
+      "title": "LOB Throughput",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "sum(rate(lob_orders_total[1m]))",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "decimals": 0,
+          "color": {
+            "fixedColor": "#22d3ee",
+            "mode": "fixed"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#22d3ee",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 1,
+        "w": 4,
+        "h": 3
+      }
+    },
+    {
+      "id": 302,
+      "type": "stat",
+      "title": "TimescaleDB Speedup",
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
+          "rawSql": "SELECT ROUND(AVG(grover_mean_ms) / NULLIF(AVG(bf_mean_ms),0)) || '\u00d7' FROM benchmark_quantum_results WHERE benchmark_type='timescale'",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "string",
+          "decimals": 0,
+          "color": {
+            "fixedColor": "#4ade80",
+            "mode": "fixed"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#4ade80",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center"
+      },
+      "gridPos": {
+        "x": 4,
+        "y": 1,
+        "w": 4,
+        "h": 3
+      }
+    },
+    {
+      "id": 303,
+      "type": "stat",
+      "title": "Arb Signals (24 h)",
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
+          "rawSql": "SELECT COUNT(*) FROM arbitrage_signals WHERE ts > NOW()-INTERVAL '24 hours' AND method='CLASSICAL'",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "fixedColor": "#f59e0b",
+            "mode": "fixed"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#f59e0b",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 1,
+        "w": 4,
+        "h": 3
+      }
+    },
+    {
+      "id": 304,
+      "type": "stat",
+      "title": "Grover Overhead @ N=32",
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
+          "rawSql": "SELECT ROUND(grover_mean_ms / bf_mean_ms) || '\u00d7' FROM benchmark_quantum_results WHERE benchmark_type='quantum' AND n_nodes=32",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "string",
+          "decimals": 0,
+          "color": {
+            "fixedColor": "#a78bfa",
+            "mode": "fixed"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#a78bfa",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 1,
+        "w": 4,
+        "h": 3
+      }
+    },
+    {
+      "id": 305,
+      "type": "stat",
+      "title": "SQL Injections Blocked (24 h)",
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
+          "rawSql": "SELECT COUNT(*) FROM security_events WHERE event_type='SQL_INJECTION' AND ts > NOW()-INTERVAL '24 hours'",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "fixedColor": "#f87171",
+            "mode": "fixed"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#f87171",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 1,
+        "w": 4,
+        "h": 3
+      }
+    },
+    {
+      "id": 306,
+      "type": "stat",
+      "title": "Services Up",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "count(up == 1)",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "fixedColor": "#34d399",
+            "mode": "fixed"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#34d399",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center"
+      },
+      "gridPos": {
+        "x": 20,
+        "y": 1,
+        "w": 4,
+        "h": 3
+      }
+    },
+    {
       "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 4
       },
       "id": 100,
       "title": "Price Analysis",
@@ -135,7 +513,7 @@
         "h": 12,
         "w": 24,
         "x": 0,
-        "y": 1
+        "y": 5
       },
       "id": 1,
       "options": {
@@ -218,7 +596,7 @@
         "h": 5,
         "w": 24,
         "x": 0,
-        "y": 13
+        "y": 17
       },
       "id": 8,
       "options": {
@@ -253,7 +631,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 18
+        "y": 22
       },
       "id": 101,
       "title": "Volume & Trade Flow",
@@ -324,7 +702,7 @@
         "h": 7,
         "w": 14,
         "x": 0,
-        "y": 19
+        "y": 23
       },
       "id": 9,
       "options": {
@@ -402,7 +780,7 @@
         "h": 7,
         "w": 5,
         "x": 14,
-        "y": 19
+        "y": 23
       },
       "id": 10,
       "options": {
@@ -471,7 +849,7 @@
         "h": 7,
         "w": 5,
         "x": 19,
-        "y": 19
+        "y": 23
       },
       "id": 11,
       "options": {
@@ -506,7 +884,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 26
+        "y": 30
       },
       "id": 102,
       "title": "Market Microstructure",
@@ -541,7 +919,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 27
+        "y": 31
       },
       "id": 12,
       "options": {
@@ -615,7 +993,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 27
+        "y": 31
       },
       "id": 13,
       "options": {
@@ -650,7 +1028,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 34
+        "y": 38
       },
       "id": 103,
       "title": "Recent Trades",
@@ -800,7 +1178,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 39
       },
       "id": 3,
       "options": {
@@ -842,7 +1220,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 44
+        "y": 48
       },
       "id": 104,
       "title": "System Health",
@@ -878,7 +1256,7 @@
         "h": 5,
         "w": 4,
         "x": 0,
-        "y": 45
+        "y": 49
       },
       "id": 4,
       "options": {
@@ -937,7 +1315,7 @@
         "h": 5,
         "w": 4,
         "x": 4,
-        "y": 45
+        "y": 49
       },
       "id": 5,
       "options": {
@@ -996,7 +1374,7 @@
         "h": 5,
         "w": 4,
         "x": 8,
-        "y": 45
+        "y": 49
       },
       "id": 6,
       "options": {
@@ -1066,7 +1444,7 @@
         "h": 5,
         "w": 4,
         "x": 12,
-        "y": 45
+        "y": 49
       },
       "id": 7,
       "options": {
@@ -1139,7 +1517,7 @@
         "h": 5,
         "w": 8,
         "x": 16,
-        "y": 45
+        "y": 49
       },
       "id": 14,
       "options": {
@@ -1174,7 +1552,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 50
+        "y": 54
       },
       "id": 200,
       "title": "Graph Arbitrage Engine",
@@ -1224,7 +1602,7 @@
         "h": 8,
         "w": 14,
         "x": 0,
-        "y": 51
+        "y": 55
       },
       "id": 201,
       "options": {
@@ -1270,7 +1648,7 @@
         "h": 8,
         "w": 5,
         "x": 14,
-        "y": 51
+        "y": 55
       },
       "id": 202,
       "options": {
@@ -1332,7 +1710,7 @@
         "h": 4,
         "w": 5,
         "x": 19,
-        "y": 51
+        "y": 55
       },
       "id": 203,
       "options": {
@@ -1391,7 +1769,7 @@
         "h": 4,
         "w": 5,
         "x": 19,
-        "y": 55
+        "y": 59
       },
       "id": 204,
       "options": {
@@ -1528,7 +1906,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 59
+        "y": 63
       },
       "id": 205,
       "options": {
@@ -1608,7 +1986,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 67
+        "y": 71
       },
       "id": 206,
       "options": {
@@ -1672,7 +2050,7 @@
         "h": 8,
         "w": 16,
         "x": 0,
-        "y": 74
+        "y": 78
       },
       "id": 207,
       "options": {
@@ -1733,7 +2111,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 74
+        "y": 78
       },
       "id": 208,
       "options": {
@@ -1878,7 +2256,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 82
+        "y": 86
       },
       "id": 209,
       "options": {
@@ -2061,7 +2439,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 92
+        "y": 96
       },
       "id": 210,
       "options": {
@@ -2097,6 +2475,688 @@
       "title": "CLASSICAL vs QUANTUM Arbitrage Signals",
       "description": "Both Bellman-Ford (CLASSICAL, blue) and Grover\u2019s Algorithm (QUANTUM, red) signals. classical_ms = BF runtime; quantum_ms = AerSimulator runtime.",
       "type": "table"
+    },
+    {
+      "id": 400,
+      "type": "row",
+      "title": "\ud83d\udd2c Quantum Engine \u2014 Classical vs Quantum Complexity",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 106,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 401,
+      "type": "table",
+      "title": "BF vs Grover Benchmark (N = 4 \u2192 32)",
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
+          "rawSql": "SELECT n_nodes AS \"N\", bf_mean_ms AS \"BF (ms)\", grover_mean_ms AS \"Grover (ms)\", ROUND(grover_mean_ms / NULLIF(bf_mean_ms,0)) AS \"Ratio\" FROM benchmark_quantum_results WHERE benchmark_type='quantum' ORDER BY n_nodes",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "center",
+            "filterable": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "BF (ms)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#4ade80",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Grover (ms)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#a78bfa",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ratio"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#fb923c",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "N",
+            "desc": false
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 107,
+        "w": 14,
+        "h": 9
+      }
+    },
+    {
+      "id": 402,
+      "type": "stat",
+      "title": "BF p99 @ N=20 (production)",
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
+          "rawSql": "SELECT bf_p99_ms FROM benchmark_quantum_results WHERE benchmark_type='quantum' AND n_nodes=20",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "decimals": 2,
+          "color": {
+            "fixedColor": "#4ade80",
+            "mode": "fixed"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#4ade80",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "center"
+      },
+      "gridPos": {
+        "x": 14,
+        "y": 107,
+        "w": 5,
+        "h": 4
+      }
+    },
+    {
+      "id": 403,
+      "type": "stat",
+      "title": "Circuit Depth @ N=32",
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
+          "rawSql": "SELECT circuit_depth FROM benchmark_quantum_results WHERE benchmark_type='quantum' AND n_nodes=32",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "fixedColor": "#a78bfa",
+            "mode": "fixed"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#a78bfa",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "center"
+      },
+      "gridPos": {
+        "x": 19,
+        "y": 107,
+        "w": 5,
+        "h": 4
+      }
+    },
+    {
+      "id": 404,
+      "type": "stat",
+      "title": "Qubits @ N=32",
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
+          "rawSql": "SELECT n_qubits FROM benchmark_quantum_results WHERE benchmark_type='quantum' AND n_nodes=32",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "fixedColor": "#a78bfa",
+            "mode": "fixed"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#a78bfa",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "center"
+      },
+      "gridPos": {
+        "x": 14,
+        "y": 111,
+        "w": 5,
+        "h": 4
+      }
+    },
+    {
+      "id": 405,
+      "type": "stat",
+      "title": "Grover Overhead @ N=32",
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
+          "rawSql": "SELECT ROUND(grover_mean_ms / bf_mean_ms) FROM benchmark_quantum_results WHERE benchmark_type='quantum' AND n_nodes=32",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "displayName": "\u00d7 slower than BF",
+          "color": {
+            "fixedColor": "#fb923c",
+            "mode": "fixed"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#fb923c",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "center"
+      },
+      "gridPos": {
+        "x": 19,
+        "y": 111,
+        "w": 5,
+        "h": 4
+      }
+    },
+    {
+      "id": 406,
+      "type": "text",
+      "title": "",
+      "options": {
+        "mode": "markdown",
+        "content": "**Why is Grover slower on AerSimulator?**  \nAerSimulator computes the full 2\u207f-element state vector classically, producing **O(2\u207f) overhead** per iteration. On *real quantum hardware*, Grover's oracle query complexity is **O(\u221aN)** \u2014 a quadratic speedup over classical search. The divergence between the two lines in the benchmark chart is the research result: it isolates simulator overhead from the theoretical quantum advantage."
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 116,
+        "w": 24,
+        "h": 3
+      }
+    },
+    {
+      "id": 500,
+      "type": "row",
+      "title": "\ud83d\udee1\ufe0f Security & Observability",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 119,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 501,
+      "type": "stat",
+      "title": "SQL Injections Blocked (24 h)",
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
+          "rawSql": "SELECT COUNT(*) FROM security_events WHERE event_type='SQL_INJECTION' AND ts > NOW()-INTERVAL '24 hours'",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "fixedColor": "#f87171",
+            "mode": "fixed"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#f87171",
+                "value": 1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "center"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 120,
+        "w": 6,
+        "h": 5
+      }
+    },
+    {
+      "id": 502,
+      "type": "stat",
+      "title": "Rate Limit Hits (24 h)",
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
+          "rawSql": "SELECT COUNT(*) FROM security_events WHERE event_type='RATE_LIMIT' AND ts > NOW()-INTERVAL '24 hours'",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "color": {
+            "fixedColor": "#fb923c",
+            "mode": "fixed"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#fb923c",
+                "value": 1
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "center"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 120,
+        "w": 6,
+        "h": 5
+      }
+    },
+    {
+      "id": 503,
+      "type": "timeseries",
+      "title": "Proxy QPS (orders/sec)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "sum(rate(lob_orders_total[1m]))",
+          "legendFormat": "orders/sec",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "color": {
+            "fixedColor": "#22d3ee",
+            "mode": "fixed"
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "single"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 120,
+        "w": 12,
+        "h": 5
+      }
+    },
+    {
+      "id": 504,
+      "type": "timeseries",
+      "title": "p99 Order Latency (ms)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "expr": "histogram_quantile(0.99, sum(rate(lob_order_latency_ms_bucket[1m])) by (le))",
+          "legendFormat": "p99 ms",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "color": {
+            "fixedColor": "#4ade80",
+            "mode": "fixed"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 5
+              },
+              {
+                "color": "red",
+                "value": 10
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "tooltip": {
+          "mode": "single"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 125,
+        "w": 12,
+        "h": 7
+      }
+    },
+    {
+      "id": 505,
+      "type": "table",
+      "title": "Recent Security Events",
+      "datasource": {
+        "type": "postgres",
+        "uid": "TimescaleDB"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "TimescaleDB"
+          },
+          "rawSql": "SELECT to_char(ts, 'HH24:MI:SS') AS \"Time\", event_type AS \"Event\", client_ip AS \"Client IP\", endpoint AS \"Endpoint\", blocked AS \"Blocked\" FROM security_events ORDER BY ts DESC LIMIT 20",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Event"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "SQL_INJECTION": {
+                        "color": "#f87171",
+                        "index": 0
+                      }
+                    }
+                  },
+                  {
+                    "type": "value",
+                    "options": {
+                      "RATE_LIMIT": {
+                        "color": "#fb923c",
+                        "index": 1
+                      }
+                    }
+                  },
+                  {
+                    "type": "value",
+                    "options": {
+                      "AUTH_FAIL": {
+                        "color": "#facc15",
+                        "index": 2
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 125,
+        "w": 12,
+        "h": 7
+      }
     }
   ],
   "refresh": "5s",
