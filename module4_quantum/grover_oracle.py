@@ -7,7 +7,7 @@ For each profitable basis state the oracle:
   1. Applies X to every qubit whose bit is '0' (converts the state to all-1s)
   2. Applies H to the ancilla (last qubit)
   3. Applies MCX (multi-controlled-X) with all data qubits as controls and
-     the ancilla as target — this achieves the phase flip via the H-MCX-H trick
+     the ancilla as target - this achieves the phase flip via the H-MCX-H trick
   4. Applies H to the ancilla (undo)
   5. Un-applies the X gates from step 1
 """
@@ -47,7 +47,7 @@ def build_oracle(profitable_states: list[int], n_qubits: int) -> QuantumCircuit:
     3. Apply H to the ancilla to put it in |−⟩ = (|0⟩ − |1⟩)/√2.
     4. Apply MCX with controls = [0 … n_qubits-2], target = n_qubits-1.
        When all controls are |1⟩ the ancilla flips, but because it is in |−⟩
-       the operation contributes a global −1 phase to that term — this is the
+       the operation contributes a global −1 phase to that term - this is the
        standard phase-kickback trick.
     5. Apply H to the ancilla to restore it to |0⟩.
     6. Un-apply the X gates from step 2.
@@ -73,27 +73,27 @@ def build_oracle(profitable_states: list[int], n_qubits: int) -> QuantumCircuit:
             qc.z(0)
             continue
 
-        # Step 1 — convert state → |11…1⟩ on data register
+        # Step 1 - convert state → |11…1⟩ on data register
         # Binary representation, padded to n_data bits, MSB first
         bits = format(state, f"0{n_data}b")
         x_targets = [data_qubits[i] for i, b in enumerate(bits) if b == "0"]
         if x_targets:
             qc.x(x_targets)
 
-        # Step 2 — put ancilla in |−⟩
+        # Step 2 - put ancilla in |−⟩
         qc.h(ancilla)
 
-        # Step 3 — MCX: controls = all data qubits, target = ancilla
+        # Step 3 - MCX: controls = all data qubits, target = ancilla
         if data_qubits:
             qc.mcx(data_qubits, ancilla)
         else:
             # n_qubits == 1 handled above; this branch is unreachable
             qc.x(ancilla)
 
-        # Step 4 — restore ancilla to |0⟩
+        # Step 4 - restore ancilla to |0⟩
         qc.h(ancilla)
 
-        # Step 5 — undo the X gates
+        # Step 5 - undo the X gates
         if x_targets:
             qc.x(x_targets)
 

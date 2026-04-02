@@ -72,7 +72,7 @@ async def lifespan(app: FastAPI):
 
         if row_count < 1000:
             logger.warning(
-                "raw_ticks has only %d rows — real data may not be loaded. "
+                "raw_ticks has only %d rows - real data may not be loaded. "
                 "Triggering fetch_real_data in background...", row_count
             )
             asyncio.create_task(_auto_fetch_real_data())
@@ -270,7 +270,7 @@ async def get_ohlcv(
 
     conn = _get_conn()
     try:
-        # Use format for view name (safe — controlled values only)
+        # Use format for view name (safe - controlled values only)
         query = f"SELECT bucket, symbol, open, high, low, close, volume FROM {view} WHERE symbol = %s"
         params: list = [symbol]
 

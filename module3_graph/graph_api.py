@@ -233,7 +233,7 @@ async def get_paths(from_symbol: str = Query("USD", description="Starting symbol
 # ── GET /graph/rates ─────────────────────────────────────────────────────────
 @app.get("/graph/rates")
 async def get_rates():
-    """Return N×N adjacency matrix JSON — consumed by Module 4 quantum_service.py."""
+    """Return N×N adjacency matrix JSON - consumed by Module 4 quantum_service.py."""
     conn = psycopg.connect(_dsn(), autocommit=True)
     try:
         rates, nodes = build_rate_matrix(conn)

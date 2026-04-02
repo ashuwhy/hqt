@@ -31,7 +31,7 @@ SELECT create_hypertable('raw_ticks', 'ts',
 CREATE INDEX IF NOT EXISTS idx_ticks_symbol_ts ON raw_ticks (symbol, ts DESC);
 ```
 
-**Compression policy** — applied after 7 days:
+**Compression policy** - applied after 7 days:
 
 ```sql
 ALTER TABLE raw_ticks SET (
@@ -42,7 +42,7 @@ ALTER TABLE raw_ticks SET (
 SELECT add_compression_policy('raw_ticks', INTERVAL '7 days', if_not_exists => TRUE);
 ```
 
-**Retention policy** — drop chunks older than 90 days:
+**Retention policy** - drop chunks older than 90 days:
 
 ```sql
 SELECT add_retention_policy('raw_ticks', INTERVAL '90 days', if_not_exists => TRUE);
@@ -50,7 +50,7 @@ SELECT add_retention_policy('raw_ticks', INTERVAL '90 days', if_not_exists => TR
 
 ---
 
-### 1.2 Continuous Aggregates — All Four Required
+### 1.2 Continuous Aggregates - All Four Required
 
 All four views are defined in `init.sql` inside idempotent `DO $$ IF NOT EXISTS $$` blocks.
 
@@ -182,7 +182,7 @@ CREATE TABLE IF NOT EXISTS trades (
     sell_order_id UUID            NOT NULL REFERENCES orders(order_id),
     price         NUMERIC(18, 8)  NOT NULL,
     quantity      NUMERIC(18, 8)  NOT NULL,
-    PRIMARY KEY (trade_id)           -- single-column PK; ⚠ was (trade_id, ts) — FK refs fail with composite
+    PRIMARY KEY (trade_id)           -- single-column PK; ⚠ was (trade_id, ts) - FK refs fail with composite
 );
 
 SELECT create_hypertable('trades', 'ts', if_not_exists => TRUE);
@@ -204,7 +204,7 @@ BEGIN
 END $$;
 ```
 
-### 3.2 Asset Nodes (20 total — via `module3_graph/graph_init.py`)
+### 3.2 Asset Nodes (20 total - via `module3_graph/graph_init.py`)
 
 ```cypher
 -- Crypto (10)
@@ -269,7 +269,7 @@ CREATE TABLE IF NOT EXISTS arbitrage_signals (
     classical_ms      NUMERIC(10, 3),             -- Bellman-Ford wall-clock
     quantum_ms        NUMERIC(10, 3),             -- Grover wall-clock
     graph_size_n      INT             NOT NULL,
-    PRIMARY KEY (signal_id)            -- ⚠ was (signal_id, ts) composite — fixed
+    PRIMARY KEY (signal_id)            -- ⚠ was (signal_id, ts) composite - fixed
 );
 
 SELECT create_hypertable('arbitrage_signals', 'ts', if_not_exists => TRUE);
@@ -293,7 +293,7 @@ CREATE TABLE IF NOT EXISTS security_events (
     raw_payload  TEXT,
     blocked      BOOLEAN         NOT NULL DEFAULT TRUE,
     endpoint     VARCHAR(200),
-    PRIMARY KEY (event_id)           -- ⚠ was (event_id, ts) composite — fixed
+    PRIMARY KEY (event_id)           -- ⚠ was (event_id, ts) composite - fixed
 );
 
 SELECT create_hypertable('security_events', 'ts', if_not_exists => TRUE);

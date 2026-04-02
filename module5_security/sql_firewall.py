@@ -2,8 +2,8 @@
 SQL Injection Firewall Middleware for HQT Security Proxy.
 
 Two-layer detection:
-  1. String scan — fast regex/string check for common injection patterns
-  2. AST scan — sqlglot parses the payload and rejects DDL statements
+  1. String scan - fast regex/string check for common injection patterns
+  2. AST scan - sqlglot parses the payload and rejects DDL statements
 """
 from __future__ import annotations
 

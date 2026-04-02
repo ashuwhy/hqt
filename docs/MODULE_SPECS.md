@@ -27,17 +27,17 @@
 ### C++ Threading Model
 
 ```cpp
-// Thread A — Inbound (Kafka Consumer)
+// Thread A - Inbound (Kafka Consumer)
 // Consumes 'raw_orders' via librdkafka.
 // Pushes parsed Order to inbound_queue.
 
-// Thread B — Matching
+// Thread B - Matching
 // Pops from inbound_queue.
 // Calls book.place(order).
 // Pushes resulting Trades to outbound_queue.
 // Broadcasts depth updates via uWebSockets.
 
-// Thread C — Outbound (Kafka Producer)
+// Thread C - Outbound (Kafka Producer)
 // Pops from outbound_queue.
 // Publishes to 'executed_trades' via librdkafka.
 ```
@@ -68,7 +68,7 @@ Family<Gauge>& lob_active_orders;     // labels: symbol
 
 | Tier | Approach | Est. QPS | Status |
 |------|----------|---------|--------|
-| 1 | C++ uWebSockets (`lob_api.cpp`) — packets arrive directly into C++ memory | 100,000+ | **Implementing now** |
+| 1 | C++ uWebSockets (`lob_api.cpp`) - packets arrive directly into C++ memory | 100,000+ | **Implementing now** |
 | 2 | Persistent WebSocket / binary msgpack frames | 10,000+ | Future optimisation |
 | 3 | Python FastAPI + orjson + batch endpoint | 5,000+ | Deprecated / Replaced |
 
@@ -77,7 +77,7 @@ We have pivoted from Tier 3 (Python) directly to Tier 1 (C++ Native) to achieve 
 ### Benchmarking
 
 ```bash
-# 1. Siege — single-order baseline
+# 1. Siege - single-order baseline
 siege -c 200 -t 30S --content-type "application/json" -f module1_lob/urls.txt
 
 # Create siege.conf: content-type = application/json
@@ -94,9 +94,9 @@ Target: > 100,000 order ops/sec at p99 < 10ms. Record in `benchmark_runs`.
 
 ### Data Ingestion Pipeline
 
-1. `kafka_consumer.py` — `confluent_kafka.Consumer` on `executed_trades` (instead of `raw_orders`), group_id `timescale_ingestor`
+1. `kafka_consumer.py` - `confluent_kafka.Consumer` on `executed_trades` (instead of `raw_orders`), group_id `timescale_ingestor`
 2. Batches of 1,000 records or 100ms timeout → `psycopg3` binary COPY into `raw_ticks`
-3. `gen_ticks.py` — GBM price series (`dS = S * (μ dt + σ dW)`, μ=0, σ=0.02), 1M rows, 10 symbols
+3. `gen_ticks.py` - GBM price series (`dS = S * (μ dt + σ dW)`, μ=0, σ=0.02), 1M rows, 10 symbols
 4. On startup: verify `raw_ticks` hypertable exists, log chunk count
 
 ### Hypertable Configuration
@@ -106,7 +106,7 @@ Target: > 100,000 order ops/sec at p99 < 10ms. Record in `benchmark_runs`.
 - Compression after 7 days (`compress_segmentby = 'symbol'`)
 - Retention: drop chunks older than 90 days
 
-### Continuous Aggregates (all 4 — defined in `init.sql`)
+### Continuous Aggregates (all 4 - defined in `init.sql`)
 
 | View | Bucket | Refresh interval | Refresh offset |
 |------|--------|-----------------|----------------|
@@ -182,7 +182,7 @@ Mounted into `module5_security/main.py` via `app.include_router(analytics_router
 
 ### Graph Schema
 
-- **Nodes:** 20 `Asset` vertices — BTC ETH BNB SOL ADA XRP DOGE AVAX MATIC DOT + USD EUR GBP JPY AUD CAD CHF INR SGD HKD
+- **Nodes:** 20 `Asset` vertices - BTC ETH BNB SOL ADA XRP DOGE AVAX MATIC DOT + USD EUR GBP JPY AUD CAD CHF INR SGD HKD
 - **Edges:** Directed `EXCHANGE` edges for all active trading pairs
 - **Edge properties:** `bid FLOAT`, `ask FLOAT`, `spread FLOAT`, `last_updated BIGINT`
 
@@ -209,13 +209,13 @@ async def update_edge_weights():
                 best_ask = depth["asks"][0][0]
                 # Cypher UPDATE via psycopg3 + AGE
             except Exception as e:
-                logger.warning(f"LOB unavailable for {symbol}: {e} — skipping")
+                logger.warning(f"LOB unavailable for {symbol}: {e} - skipping")
         await asyncio.sleep(0.5)
 ```
 
 Prometheus gauge: `graph_edge_update_lag_ms`
 
-### Bellman-Ford — Primary Arbitrage Engine (`bellman_ford.py`)
+### Bellman-Ford - Primary Arbitrage Engine (`bellman_ford.py`)
 
 ```python
 import math
@@ -250,10 +250,10 @@ def benchmark_bellman_ford(n_nodes: int, n_trials: int) -> dict:
 
 ### Cypher Query Functions (`graph_queries.py`)
 
-1. `find_3hop_arbitrage_cycles(from_symbol)` — all profitable directed 3-hop cycles from a node
-2. `find_shortest_path(from_sym, to_sym)` — most profitable exchange route between two assets
-3. `find_high_spread_edges(threshold)` — edges where `spread > threshold`
-4. `crypto_subgraph()` — subgraph of crypto-only Asset nodes
+1. `find_3hop_arbitrage_cycles(from_symbol)` - all profitable directed 3-hop cycles from a node
+2. `find_shortest_path(from_sym, to_sym)` - most profitable exchange route between two assets
+3. `find_high_spread_edges(threshold)` - edges where `spread > threshold`
+4. `crypto_subgraph()` - subgraph of crypto-only Asset nodes
 
 ### Graph API (`graph_api.py`)
 
@@ -274,7 +274,7 @@ Mounted into `module5_security/main.py` via `app.include_router(graph_router, pr
 **Owner:** Member 4 (Kshetrimayum Abo)
 **Language:** Python 3.12 + Qiskit 0.45 + qiskit-aer 0.13
 
-> **Architecture Decision (ADR, March 9 2026):** Quantum does NOT replace Bellman-Ford. It runs on the same rate matrix from `/graph/rates`, its wall-clock time is recorded alongside Bellman-Ford's, and the final report shows the O(√N) vs O(N) complexity comparison. AerSimulator is *slower* than Bellman-Ford due to classical state-vector overhead — this is the **expected, documented** result.
+> **Architecture Decision (ADR, March 9 2026):** Quantum does NOT replace Bellman-Ford. It runs on the same rate matrix from `/graph/rates`, its wall-clock time is recorded alongside Bellman-Ford's, and the final report shows the O(√N) vs O(N) complexity comparison. AerSimulator is *slower* than Bellman-Ford due to classical state-vector overhead - this is the **expected, documented** result.
 
 ### Immediate Priority: Add `/health` Stub
 
@@ -357,7 +357,7 @@ Prometheus histograms: `quantum_grover_ms`, `quantum_bellman_ford_ms`
 - 10 trials per method per N on synthetic random rate matrix
 - Records: `n_nodes, bellman_ford_ms_avg, bellman_ford_ms_p99, grover_ms_avg, grover_ms_p99, n_qubits, circuit_depth, grover_iterations`
 - Output: `benchmark_quantum.csv` + `benchmark_quantum.png` (dual line chart, log-scale Y, O(N) and O(√N) reference lines)
-- Report narrative: "Bellman-Ford is O(N·E) and completes in < 5ms for all tested graph sizes. Grover's Algorithm has a theoretical O(√N) query complexity advantage over classical search, but this advantage applies only to oracle queries on real quantum hardware — AerSimulator computes the full state vector classically, resulting in exponential time overhead as N grows. The benchmark demonstrates the theoretical complexity, not a practical speedup."
+- Report narrative: "Bellman-Ford is O(N·E) and completes in < 5ms for all tested graph sizes. Grover's Algorithm has a theoretical O(√N) query complexity advantage over classical search, but this advantage applies only to oracle queries on real quantum hardware - AerSimulator computes the full state vector classically, resulting in exponential time overhead as N grows. The benchmark demonstrates the theoretical complexity, not a practical speedup."
 
 ### Quantum API (`quantum_api.py`)
 
@@ -383,7 +383,7 @@ from fastapi import FastAPI
 # Module routers (same process for analytics + graph; reverse proxy for lob + quantum)
 app.include_router(analytics_router, prefix="/analytics")
 app.include_router(graph_router,     prefix="/graph")
-# LOB and Quantum are separate containers — proxied via httpx
+# LOB and Quantum are separate containers - proxied via httpx
 ```
 
 ### SQL Injection Firewall (`sql_firewall.py`)
@@ -414,7 +414,7 @@ async def sql_injection_middleware(request, call_next):
 ### Rate Limiter (`rate_limiter.py`)
 
 ```python
-# Redis sliding-window — 1,000 req/s/IP
+# Redis sliding-window - 1,000 req/s/IP
 key = f"rl:{client_ip}"
 count = await redis_client.incr(key)
 if count == 1: await redis_client.expire(key, 1)
@@ -436,14 +436,14 @@ rate_limit_hits       = Counter('security_rate_limit_total', ...)
 arb_signals           = Counter('quantum_arbitrage_signals_total', ..., ['method'])
 ```
 
-### Grafana Dashboard (`hqt_main.json`) — 5 Panels
+### Grafana Dashboard (`hqt_main.json`) - 5 Panels
 
 | Panel | Type | Source | Query / Data |
 |-------|------|--------|-------------|
 | 1 | Candlestick | TimescaleDB | `SELECT bucket, open, high, low, close FROM ohlcv_1m WHERE symbol=$symbol` |
 | 2 | Heatmap | TimescaleDB | LOB depth bids/asks at each price level over time |
 | 3 | Bar chart | TimescaleDB | `SELECT bucket, SUM(volume) FROM ohlcv_1m GROUP BY bucket ORDER BY bucket DESC LIMIT 60` |
-| 4 | Table | PostgreSQL | `SELECT ts, path, profit_pct, method FROM arbitrage_signals ORDER BY ts DESC LIMIT 20` — both CLASSICAL and QUANTUM rows, colour-coded by method |
+| 4 | Table | PostgreSQL | `SELECT ts, path, profit_pct, method FROM arbitrage_signals ORDER BY ts DESC LIMIT 20` - both CLASSICAL and QUANTUM rows, colour-coded by method |
 | 5 | Time series | Prometheus | `rate(lob_orders_total[1m])` + `histogram_quantile(0.99, rate(lob_order_latency_ms_bucket[1m]))` |
 
 ### Siege DDoS Simulation

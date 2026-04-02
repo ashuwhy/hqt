@@ -5,10 +5,10 @@ Integration and unit tests for the Module 3 Graph Arbitrage Engine.
 
 Sections
 --------
-1. TestBellmanFordIntegration  — DB-backed Bellman-Ford tests (require AGE graph)
-2. TestGraphQueries            — DB-backed Cypher query helpers
-3. TestGraphAPI                — HTTP integration tests against the running graph-service
-4. TestGraphInit               — DB-backed graph initialisation (idempotency, node/edge presence)
+1. TestBellmanFordIntegration  - DB-backed Bellman-Ford tests (require AGE graph)
+2. TestGraphQueries            - DB-backed Cypher query helpers
+3. TestGraphAPI                - HTTP integration tests against the running graph-service
+4. TestGraphInit               - DB-backed graph initialisation (idempotency, node/edge presence)
 
 All DB tests use the ``db_conn`` session-scoped fixture from conftest.py.
 All HTTP tests use the ``graph_client`` async fixture from conftest.py and are
@@ -64,7 +64,7 @@ class TestBellmanFordIntegration:
     def test_build_rate_matrix_returns_data(self, db_conn: psycopg.Connection):
         """build_rate_matrix must return a non-empty rate dict and ≥2 nodes."""
         if not _graph_is_initialised(db_conn):
-            pytest.skip("AGE graph not initialised — skipping DB test")
+            pytest.skip("AGE graph not initialised - skipping DB test")
 
         rates, nodes = build_rate_matrix(db_conn)
 
@@ -80,7 +80,7 @@ class TestBellmanFordIntegration:
     def test_rate_matrix_node_consistency(self, db_conn: psycopg.Connection):
         """Every (src, dst) key in rates must have both src and dst in nodes."""
         if not _graph_is_initialised(db_conn):
-            pytest.skip("AGE graph not initialised — skipping DB test")
+            pytest.skip("AGE graph not initialised - skipping DB test")
 
         rates, nodes = build_rate_matrix(db_conn)
         node_set = set(nodes)
@@ -92,7 +92,7 @@ class TestBellmanFordIntegration:
     def test_run_detector_inserts_signal(self, db_conn: psycopg.Connection):
         """If BF finds a profitable cycle, _insert_signal must write a CLASSICAL row."""
         if not _graph_is_initialised(db_conn):
-            pytest.skip("AGE graph not initialised — skipping DB test")
+            pytest.skip("AGE graph not initialised - skipping DB test")
 
         rates, nodes = build_rate_matrix(db_conn)
         if len(nodes) < 4:
@@ -100,11 +100,11 @@ class TestBellmanFordIntegration:
 
         cycle = bellman_ford_arbitrage(rates, nodes)
         if cycle is None:
-            pytest.skip("No arbitrage cycle found — skipping insertion test")
+            pytest.skip("No arbitrage cycle found - skipping insertion test")
 
         profit_pct = compute_cycle_profit(cycle, rates)
         if profit_pct <= 0:
-            pytest.skip("Detected cycle is not profitable — skipping insertion test")
+            pytest.skip("Detected cycle is not profitable - skipping insertion test")
 
         _insert_signal(db_conn, cycle, profit_pct, 1.23, len(nodes))
 
@@ -118,13 +118,13 @@ class TestBellmanFordIntegration:
     def test_compute_cycle_profit_positive(self, db_conn: psycopg.Connection):
         """If BF detects a cycle, profit must be > 0."""
         if not _graph_is_initialised(db_conn):
-            pytest.skip("AGE graph not initialised — skipping DB test")
+            pytest.skip("AGE graph not initialised - skipping DB test")
 
         rates, nodes = build_rate_matrix(db_conn)
         cycle = bellman_ford_arbitrage(rates, nodes)
 
         if cycle is None:
-            pytest.skip("No arbitrage cycle found — skipping profit test")
+            pytest.skip("No arbitrage cycle found - skipping profit test")
 
         profit = compute_cycle_profit(cycle, rates)
         assert profit > 0, f"BF returned cycle {cycle} but profit={profit:.6f}% is not positive"
@@ -141,7 +141,7 @@ class TestGraphQueries:
     def test_find_high_spread_edges(self, db_conn: psycopg.Connection):
         """find_high_spread_edges(threshold=0.0) must return valid edges."""
         if not _graph_is_initialised(db_conn):
-            pytest.skip("AGE graph not initialised — skipping DB test")
+            pytest.skip("AGE graph not initialised - skipping DB test")
 
         edges = find_high_spread_edges(db_conn, threshold=0.0)
         assert isinstance(edges, list)
@@ -155,7 +155,7 @@ class TestGraphQueries:
     def test_find_high_spread_edges_threshold(self, db_conn: psycopg.Connection):
         """Impossibly high threshold → empty list."""
         if not _graph_is_initialised(db_conn):
-            pytest.skip("AGE graph not initialised — skipping DB test")
+            pytest.skip("AGE graph not initialised - skipping DB test")
 
         edges = find_high_spread_edges(db_conn, threshold=9_999_999.0)
         assert edges == []
@@ -163,7 +163,7 @@ class TestGraphQueries:
     def test_crypto_subgraph(self, db_conn: psycopg.Connection):
         """crypto_subgraph must return nodes with BTC/ETH and valid edges."""
         if not _graph_is_initialised(db_conn):
-            pytest.skip("AGE graph not initialised — skipping DB test")
+            pytest.skip("AGE graph not initialised - skipping DB test")
 
         result = crypto_subgraph(db_conn)
         assert isinstance(result, dict)
@@ -182,7 +182,7 @@ class TestGraphQueries:
     def test_find_shortest_path_direct(self, db_conn: psycopg.Connection):
         """find_shortest_path('BTC', 'USD') → valid path."""
         if not _graph_is_initialised(db_conn):
-            pytest.skip("AGE graph not initialised — skipping DB test")
+            pytest.skip("AGE graph not initialised - skipping DB test")
 
         result = find_shortest_path(db_conn, "BTC", "USD")
         assert result is not None
@@ -195,7 +195,7 @@ class TestGraphQueries:
     def test_find_shortest_path_no_path(self, db_conn: psycopg.Connection):
         """Non-existent path → None."""
         if not _graph_is_initialised(db_conn):
-            pytest.skip("AGE graph not initialised — skipping DB test")
+            pytest.skip("AGE graph not initialised - skipping DB test")
 
         result = find_shortest_path(db_conn, "FAKECOIN", "FAKEFIAT")
         assert result is None
@@ -272,7 +272,7 @@ class TestGraphAPI:
 
 @pytest.mark.integration
 class TestGraphInit:
-    """Tests for graph_init.init_graph — idempotency and data completeness."""
+    """Tests for graph_init.init_graph - idempotency and data completeness."""
 
     def test_init_graph_idempotent(self, db_conn: psycopg.Connection):
         """Calling init_graph twice must return consistent results."""

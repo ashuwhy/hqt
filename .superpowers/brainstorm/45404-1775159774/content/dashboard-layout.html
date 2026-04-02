@@ -1,0 +1,61 @@
+<h2>What should we add to the Grafana dashboard?</h2>
+<p class="subtitle">29 panels already exist. We need to add the missing pieces for the demo. Which layout approach?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Demo-First: "Wow Row" at the Top</h3>
+      <p>Add a new <strong>pinned hero row</strong> at the very top with 6 big stat tiles professors see immediately:</p>
+      <ul style="margin:8px 0 0 16px;font-size:13px;line-height:1.8">
+        <li>🟢 LOB Throughput (orders/sec, live)</li>
+        <li>🟡 TimescaleDB Speedup (37× badge)</li>
+        <li>🔵 Arbitrage Signals Detected (count)</li>
+        <li>🟣 Grover vs BF Speedup ratio</li>
+        <li>🔴 SQL Injections Blocked (today)</li>
+        <li>⚪ System Uptime</li>
+      </ul>
+      <p style="margin-top:8px;font-size:13px">Then add Quantum Scaling table + Security Events rows below the existing content.</p>
+      <div class="pros-cons" style="margin-top:10px">
+        <div class="pros"><h4>Pros</h4><ul><li>Impresses immediately</li><li>Professors see headline numbers in 5s</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Less technically deep at a glance</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Technical-First: New Sections at Bottom</h3>
+      <p>Keep existing layout, append two new collapsed rows:</p>
+      <ul style="margin:8px 0 0 16px;font-size:13px;line-height:1.8">
+        <li><strong>Quantum Engine</strong> row: BF vs Grover table (n=4→32 with ms), circuit depth, n_qubits</li>
+        <li><strong>Security & Observability</strong> row: SQL injections blocked, rate limit hits, QPS + p99 latency time series, security events log table</li>
+        <li>+ LOB depth heatmap in the existing Microstructure section</li>
+      </ul>
+      <div class="pros-cons" style="margin-top:10px">
+        <div class="pros"><h4>Pros</h4><ul><li>Shows all 5 modules</li><li>Technically rigorous</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Requires scrolling to see the good parts</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Hybrid: Hero Row + All New Sections</h3>
+      <p>Both A and B together:</p>
+      <ul style="margin:8px 0 0 16px;font-size:13px;line-height:1.8">
+        <li>Hero stat row at the top (instant wow)</li>
+        <li>Quantum Engine row with full benchmark table</li>
+        <li>Security & Observability row with events log</li>
+        <li>LOB depth heatmap in microstructure</li>
+      </ul>
+      <p style="margin-top:8px;font-size:13px;color:#94a3b8">~35 total panels. All 5 modules visible. Most impressive for a live demo scroll-through.</p>
+      <div class="pros-cons" style="margin-top:10px">
+        <div class="pros"><h4>Pros</h4><ul><li>Most complete</li><li>Best for grading all modules</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Most work to implement</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>

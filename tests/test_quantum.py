@@ -1,5 +1,5 @@
 """
-Tests for Module 4 — Quantum Arbitrage Detection Engine.
+Tests for Module 4 - Quantum Arbitrage Detection Engine.
 
 These tests cover:
   - Grover oracle: circuit structure, phase-flip correctness
@@ -20,7 +20,7 @@ import pytest_asyncio
 
 pytestmark = pytest.mark.unit
 
-# qiskit_aer is a heavy C++ package — only available in Docker containers.
+# qiskit_aer is a heavy C++ package - only available in Docker containers.
 # Tests that call run_grover (which uses AerSimulator) are skipped locally.
 try:
     import qiskit_aer  # noqa: F401
@@ -289,7 +289,7 @@ class TestQuantumAPI:
 
     @pytest_asyncio.fixture
     async def client(self):
-        """Async test client — patches quantum_loop so lifespan doesn't block."""
+        """Async test client - patches quantum_loop so lifespan doesn't block."""
         import httpx
         from module4_quantum.quantum_api import app
         with patch("module4_quantum.quantum_api.quantum_loop", new_callable=AsyncMock) as mock_loop:

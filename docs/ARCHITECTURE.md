@@ -23,7 +23,7 @@
     │                                            │
     │ best-bid / best-ask (every 500ms)          │
     ▼                                            │
-[Module 3: Graph Layer — Apache AGE]             │
+[Module 3: Graph Layer - Apache AGE]             │
  Directed weighted fx_graph (20+ nodes)          │
  *** Bellman-Ford PRIMARY arbitrage ***          │
  Cypher graph query interface                    │
@@ -52,10 +52,10 @@
 
 ---
 
-## 2. Architecture Decision Record — Bellman-Ford vs Quantum
+## 2. Architecture Decision Record - Bellman-Ford vs Quantum
 
 **Decision Date:** March 9, 2026
-**Status:** ACCEPTED — applies to Modules 3, 4, 5, and the final report
+**Status:** ACCEPTED - applies to Modules 3, 4, 5, and the final report
 
 ### Decision
 
@@ -70,7 +70,7 @@ Grover's Algorithm (Qiskit AerSimulator) is a **research benchmark only**.
 | Speed at N=20 | < 5 ms | ~10,000 ms |
 | Finds ALL cycles | Yes | No (most probable only) |
 | Production viable | Yes | No (simulation overhead inverts advantage) |
-| Academic value | High — graph algorithms | High — complexity theory proof |
+| Academic value | High - graph algorithms | High - complexity theory proof |
 
 ### Implementation Rule
 
@@ -78,22 +78,22 @@ Grover's Algorithm (Qiskit AerSimulator) is a **research benchmark only**.
 - **Grover** runs every 10s in the same service for benchmarking only; inserts `method='QUANTUM'` rows
 - Both write to the same `arbitrage_signals` table, distinguished by the `method` column
 - Grafana Panel 4 displays both streams, colour-coded
-- `benchmark_quantum.png` — BF as the near-flat line and Grover rising exponentially — is the **expected, documented result** and becomes the strongest slide in the report
+- `benchmark_quantum.png` - BF as the near-flat line and Grover rising exponentially - is the **expected, documented result** and becomes the strongest slide in the report
 
 ---
 
-## 3. Architecture Decision Record — LOB Network Layer (Python vs C++)
+## 3. Architecture Decision Record - LOB Network Layer (Python vs C++)
 
 **Decision Date:** March 9, 2026
-**Status:** ACCEPTED — Python FastAPI retained for Phase 1; optimizations documented for future pivot
+**Status:** ACCEPTED - Python FastAPI retained for Phase 1; optimizations documented for future pivot
 
 ### Three Tiers of LOB Network Performance
 
 | Tier | Approach | Est. QPS | Complexity | Decision |
 |------|----------|---------|-----------|---------|
-| **Tier 1** | C++ network layer (uWebSockets / Drogon) | **100,000+** | Very high — rewrite `lob_api.py` → `lob_api.cpp`; packets arrive directly into C++ memory | Future HFT pivot |
-| **Tier 2** | Persistent WebSocket / TCP socket (binary frames) | **10,000+** | Medium — eliminate per-request HTTP handshake overhead; stream binary data over single open connection | Future optimisation |
-| **Tier 3** | Python FastAPI + quick wins | **5,000+** | Low — two targeted changes to existing code | **Current implementation** |
+| **Tier 1** | C++ network layer (uWebSockets / Drogon) | **100,000+** | Very high - rewrite `lob_api.py` → `lob_api.cpp`; packets arrive directly into C++ memory | Future HFT pivot |
+| **Tier 2** | Persistent WebSocket / TCP socket (binary frames) | **10,000+** | Medium - eliminate per-request HTTP handshake overhead; stream binary data over single open connection | Future optimisation |
+| **Tier 3** | Python FastAPI + quick wins | **5,000+** | Low - two targeted changes to existing code | **Current implementation** |
 
 ### Why We Are Moving to C++ for Phase 1 (Tier 1)
 
@@ -111,7 +111,7 @@ This pivot alters some architectural boundaries:
 We will build the module using the following pattern:
 
 ```cpp
-// lob_server.cpp — Crow C++ framework server calling C++ OrderBook directly
+// lob_server.cpp - Crow C++ framework server calling C++ OrderBook directly
 #include "crow.h"
 #include "lob/book_core.hpp"
 
@@ -140,7 +140,7 @@ int main() {
 
 | Component | Technology | Port | Owner |
 |-----------|-----------|------|-------|
-| Market data ingestor | Python WebSocket client | — | Member 2 |
+| Market data ingestor | Python WebSocket client | - | Member 2 |
 | Kafka broker | Confluent CP-Kafka 7.6.0 | 9092 | Member 2 |
 | Zookeeper | Confluent CP-Zookeeper 7.6.0 | 2181 | Member 2 |
 | LOB matching engine | C++20 core + uWebSockets + librdkafka | 8001 | Member 1 |
@@ -157,7 +157,7 @@ int main() {
 
 ---
 
-## 5. LOB Engine — External Git Submodule
+## 5. LOB Engine - External Git Submodule
 
 ### 4.1 Source Repository
 
@@ -170,7 +170,7 @@ Mount path:    module1_lob/engine/
 
 | File | Purpose |
 |------|---------|
-| `cpp/src/book_core.cpp` | Matching engine — Red-Black Tree + FIFO queues per price level |
+| `cpp/src/book_core.cpp` | Matching engine - Red-Black Tree + FIFO queues per price level |
 | `cpp/src/price_levels.cpp` | Price-level management |
 | `cpp/include/lob/mempool.hpp` | Arena allocator / lock-free memory pool |
 | `cpp/src/replay.cpp` | TAQ event replay |
@@ -185,12 +185,12 @@ Before writing `lob_api.py`, verify actual exposed names:
 grep "py::class_" module1_lob/engine/python/olob/_bindings.cpp
 ```
 
-Expected: `OrderBook` / `NewOrder` / `bk.poll_trades()` — align API code to actual names.
+Expected: `OrderBook` / `NewOrder` / `bk.poll_trades()` - align API code to actual names.
 
 ### 4.4 Pre-existing Benchmark Baseline
 
-- `bench_out/latencies.csv` — nanosecond-level measurements
-- `bench_out/latency_histogram.png` — embed in final report
+- `bench_out/latencies.csv` - nanosecond-level measurements
+- `bench_out/latency_histogram.png` - embed in final report
 - Target: > 100,000 order ops/sec at p99 < 10ms
 
 ---
@@ -210,12 +210,12 @@ Expected: `OrderBook` / `NewOrder` / `bk.poll_trades()` — align API code to ac
 - **Action:** Cypher `MATCH (a)-[r:EXCHANGE]->(b) SET r.bid=$bid, r.ask=$ask, r.last_updated=timestamp()`
 - **Latency target:** Edge updated within 600ms of LOB price change
 
-### 5.3 Apache AGE → Bellman-Ford (Primary — every 500ms)
+### 5.3 Apache AGE → Bellman-Ford (Primary - every 500ms)
 
 - **Method:** `build_rate_matrix(conn)` queries all AGE `EXCHANGE` edges via psycopg3
 - **Output:** INSERT `arbitrage_signals` with `method='CLASSICAL'`
 
-### 5.4 Apache AGE → Grover (Benchmark — every 10s)
+### 5.4 Apache AGE → Grover (Benchmark - every 10s)
 
 - **Method:** `GET /graph/rates` returns N×N float adjacency matrix JSON
 - **Output:** INSERT `arbitrage_signals` with `method='QUANTUM'`
@@ -240,17 +240,17 @@ Expected: `OrderBook` / `NewOrder` / `bk.poll_trades()` — align API code to ac
 ## 7. Concurrency Model (Module 1 - C++)
 
 ```
-Thread A — InboundThread
+Thread A - InboundThread
   └── librdkafka Consumer on 'raw_orders'
   └── Writes OrderEvent → Lock-free Queue / Ring Buffer
 
-Thread B — MatchingThread
+Thread B - MatchingThread
   └── Reads from inbound queue
   └── Calls C++ OrderBook
   └── Emits TradeEvent → Outbound queue
   └── Evaluates uWebSockets broadcast for depth updates
 
-Thread C — PersistenceThread (Outbound)
+Thread C - PersistenceThread (Outbound)
   └── Reads TradeEvents
   └── librdkafka Producer → 'executed_trades' Kafka topic
 ```
@@ -270,7 +270,7 @@ postgres  ──► quantum-engine  :8004  (depends_on: postgres)
 
 postgres + redis + lob-engine + quantum-engine ──► fastapi-proxy :8000
   ⚠ fastapi-proxy depends on quantum-engine: service_started
-    (NOT service_healthy — quantum /health was missing in placeholder)
+    (NOT service_healthy - quantum /health was missing in placeholder)
 
 fastapi-proxy      ──► prometheus :9090
 postgres-exporter  ──► prometheus
@@ -294,13 +294,13 @@ prometheus ──► grafana :3000
 External Request → port 8000
       │
       ▼
-Middleware 1 — Redis Sliding-Window Rate Limiter
+Middleware 1 - Redis Sliding-Window Rate Limiter
   INCR rl:{ip} + EXPIRE 1s | limit 1,000 req/s/IP
   Blocked  → HTTP 429 + INSERT security_events (RATE_LIMIT)
   Redis down → fallback to in-process threading.Semaphore token bucket
       │
       ▼
-Middleware 2 — SQL Injection AST Firewall (sqlglot)
+Middleware 2 - SQL Injection AST Firewall (sqlglot)
   sqlglot.parse() walks AST for DDL node types (Drop, Truncate, Create)
   String scan: DROP | TRUNCATE | UNION SELECT | -- | /* | xp_ | EXEC | information_schema
   Blocked  → HTTP 403 + INSERT security_events (SQL_INJECTION)

@@ -57,9 +57,9 @@ def seed_timescale(conn: psycopg.Connection) -> int:
                 "timescale",
                 int(row["trial"]),
                 float(row["hypertable_ms"]),   # bf_mean_ms = hypertable query time
-                None,                          # bf_p99_ms — not in timescale CSV
+                None,                          # bf_p99_ms - not in timescale CSV
                 float(row["plain_ms"]),        # grover_mean_ms = plain table query time
-                None,                          # grover_p99_ms — not in timescale CSV
+                None,                          # grover_p99_ms - not in timescale CSV
                 None, None, None,
             ))
             rows += 1

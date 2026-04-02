@@ -3,7 +3,7 @@
 -- Run: psql -U hqt -d hqt -f indicators.sql
 -- ============================================================================
 
--- 1. VWAP — Volume-Weighted Average Price
+-- 1. VWAP - Volume-Weighted Average Price
 -- Usage: SELECT fn_vwap('BTC/USD', '2026-03-01', '2026-03-11');
 CREATE OR REPLACE FUNCTION fn_vwap(
     p_symbol  VARCHAR,
@@ -22,7 +22,7 @@ RETURNS NUMERIC AS $$
 $$ LANGUAGE sql STABLE;
 
 
--- 2. SMA-20 — Simple Moving Average of the last 20 one-minute closes
+-- 2. SMA-20 - Simple Moving Average of the last 20 one-minute closes
 -- Usage: SELECT fn_sma20('BTC/USD', NOW());
 CREATE OR REPLACE FUNCTION fn_sma20(
     p_symbol  VARCHAR,
@@ -41,7 +41,7 @@ RETURNS NUMERIC AS $$
 $$ LANGUAGE sql STABLE;
 
 
--- 3. Bollinger Bands — (sma20, upper = sma20 + 2σ, lower = sma20 − 2σ)
+-- 3. Bollinger Bands - (sma20, upper = sma20 + 2σ, lower = sma20 − 2σ)
 -- Returns a record with three fields
 -- Usage: SELECT * FROM fn_bollinger('BTC/USD', NOW());
 DROP TYPE IF EXISTS bollinger_result CASCADE;
@@ -71,7 +71,7 @@ RETURNS bollinger_result AS $$
 $$ LANGUAGE sql STABLE;
 
 
--- 4. RSI-14 — Relative Strength Index over last 14 one-minute periods
+-- 4. RSI-14 - Relative Strength Index over last 14 one-minute periods
 -- Uses the smoothed (Wilder) method: RSI = 100 - 100/(1 + avg_gain/avg_loss)
 -- Usage: SELECT fn_rsi14('BTC/USD', NOW());
 CREATE OR REPLACE FUNCTION fn_rsi14(

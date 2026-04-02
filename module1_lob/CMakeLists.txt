@@ -8,7 +8,7 @@ pkg_check_modules(RDKAFKA REQUIRED rdkafka rdkafka++)
 
 include(FetchContent)
 
-# simdjson — replaces nlohmann, ~20x faster
+# simdjson - replaces nlohmann, ~20x faster
 FetchContent_Declare(simdjson
     GIT_REPOSITORY https://github.com/simdjson/simdjson.git
     GIT_TAG v3.9.2
@@ -26,7 +26,7 @@ set(ENABLE_TESTING OFF CACHE BOOL "" FORCE)
 set(ENABLE_PUSH    OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(prometheus-cpp)
 
-# Drogon — replaces Crow
+# Drogon - replaces Crow
 FetchContent_Declare(drogon
     GIT_REPOSITORY https://github.com/drogonframework/drogon.git
     GIT_TAG v1.9.5

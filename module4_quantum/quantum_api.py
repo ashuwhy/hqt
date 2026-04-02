@@ -1,16 +1,16 @@
 """
 HQT Quantum Engine API
 ~~~~~~~~~~~~~~~~~~~~~~~
-FastAPI application for Module 4 — Quantum Arbitrage Detection.
+FastAPI application for Module 4 - Quantum Arbitrage Detection.
 
 Endpoints
 ---------
-  GET  /health                    — liveness probe (shared with /quantum/health)
-  GET  /quantum/health            — alias for /health
-  POST /quantum/run-grover        — run Grover or Bellman-Ford on synthetic data
-  GET  /quantum/signals           — query arbitrage_signals table
-  GET  /quantum/benchmark         — return latest benchmark_quantum.csv as JSON
-  GET  /metrics                   — Prometheus metrics
+  GET  /health                    - liveness probe (shared with /quantum/health)
+  GET  /quantum/health            - alias for /health
+  POST /quantum/run-grover        - run Grover or Bellman-Ford on synthetic data
+  GET  /quantum/signals           - query arbitrage_signals table
+  GET  /quantum/benchmark         - return latest benchmark_quantum.csv as JSON
+  GET  /metrics                   - Prometheus metrics
 
 Background
 ----------
@@ -83,7 +83,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="HQT Quantum Engine API",
     description=(
-        "Module 4 — Grover's algorithm arbitrage detection engine.  "
+        "Module 4 - Grover's algorithm arbitrage detection engine.  "
         "Runs classical Bellman-Ford and quantum Grover search in parallel "
         "on the live FX rate graph."
     ),
@@ -154,15 +154,15 @@ async def post_run_grover(body: RunGroverRequest) -> dict[str, Any]:
     graph_size_n:
         Number of synthetic nodes.  Must be between 3 and 32.
     method:
-        ``"GROVER"``     — run Grover's algorithm only
-        ``"CLASSICAL"``  — run Bellman-Ford only
-        ``"BOTH"``       — run both and return combined results (default)
+        ``"GROVER"``     - run Grover's algorithm only
+        ``"CLASSICAL"``  - run Bellman-Ford only
+        ``"BOTH"``       - run both and return combined results (default)
     """
     method = body.method.upper()
     if method not in {"GROVER", "CLASSICAL", "BOTH"}:
         raise HTTPException(
             status_code=422,
-            detail=f"method must be GROVER, CLASSICAL, or BOTH — got '{body.method}'",
+            detail=f"method must be GROVER, CLASSICAL, or BOTH - got '{body.method}'",
         )
 
     rates, nodes = _make_synthetic_rates(body.graph_size_n)
@@ -221,15 +221,15 @@ async def get_signals(
     limit:
         Maximum number of rows to return (1–500, default 50).
     method:
-        ``"QUANTUM"``    — only quantum Grover signals
-        ``"CLASSICAL"``  — only Bellman-Ford signals
-        ``"ALL"``        — both (default)
+        ``"QUANTUM"``    - only quantum Grover signals
+        ``"CLASSICAL"``  - only Bellman-Ford signals
+        ``"ALL"``        - both (default)
     """
     method_upper = method.upper()
     if method_upper not in {"QUANTUM", "CLASSICAL", "ALL"}:
         raise HTTPException(
             status_code=422,
-            detail=f"method must be QUANTUM, CLASSICAL, or ALL — got '{method}'",
+            detail=f"method must be QUANTUM, CLASSICAL, or ALL - got '{method}'",
         )
 
     try:

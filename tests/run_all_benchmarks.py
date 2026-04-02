@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Unified Benchmark Runner for HQT — Modules 1–5.
+Unified Benchmark Runner for HQT - Modules 1–5.
 
 Runs all production benchmarks and generates a consolidated summary report.
 
