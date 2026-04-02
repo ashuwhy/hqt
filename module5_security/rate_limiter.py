@@ -1,5 +1,5 @@
 """
-Rate Limiter Middleware — Redis sliding-window, 1000 req/s/IP.
+Rate Limiter Middleware - Redis sliding-window, 1000 req/s/IP.
 
 Falls back to a threading.Semaphore token-bucket if Redis is unavailable.
 """
@@ -35,7 +35,7 @@ def init_redis(url: str = "redis://redis:6379") -> None:
         _redis_client = aioredis.from_url(url, socket_connect_timeout=1, socket_timeout=1)
         logger.info("Rate limiter: Redis client initialized at %s", url)
     except Exception as exc:
-        logger.warning("Rate limiter: Could not init Redis (%s) — using in-memory fallback", exc)
+        logger.warning("Rate limiter: Could not init Redis (%s) - using in-memory fallback", exc)
         _redis_client = None
 
 

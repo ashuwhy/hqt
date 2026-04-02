@@ -1,4 +1,4 @@
-# Granular Task List — Final
+# Granular Task List - Final
 
 ## Hybrid Trading Database System
 
@@ -12,13 +12,13 @@
 
 - `[x]` Done
 - `[ ]` Not started
-- `⚠️` Bug confirmed in completed work — fix before building on top
+- `⚠️` Bug confirmed in completed work - fix before building on top
 
 ---
 
-## PHASE 0 — Infrastructure ✅ COMPLETE
+## PHASE 0 - Infrastructure ✅ COMPLETE
 
-All 15 tasks done. Three bugs found post-completion — fix immediately before Phase 2.
+All 15 tasks done. Three bugs found post-completion - fix immediately before Phase 2.
 
 ### Open Bugs
 
@@ -28,17 +28,17 @@ All 15 tasks done. Three bugs found post-completion — fix immediately before P
 
 ---
 
-## PHASE 1 — Module 1: LOB Engine ✅ COMPLETE
+## PHASE 1 - Module 1: LOB Engine ✅ COMPLETE
 
-All 14 tasks done. Three bugs found — fix before running benchmarks.
+All 14 tasks done. Three bugs found - fix before running benchmarks.
 
 ### Open Bugs
 
 - [x] **[BUG-P1-1]** `lob_api.py` obsolete (C++ rewrite removed the Python bug)
-- [x] **[BUG-P1-2]** `docker-compose.yml` `fastapi-proxy` depends on `quantum-engine: service_started` — FIXED
+- [x] **[BUG-P1-2]** `docker-compose.yml` `fastapi-proxy` depends on `quantum-engine: service_started` - FIXED
 - [x] **[BUG-P1-5]** `lob_api.py` obsolete (C++ rewrite removed the Python bug)
 
-### PHASE 1.5 — Module 1: C++ Network Rewrite (Tier 1 Pivot) ✅ COMPLETE
+### PHASE 1.5 - Module 1: C++ Network Rewrite (Tier 1 Pivot) ✅ COMPLETE
 
 Instead of the Python Tier 3 optimizations, we are pivoting to a full C++ network layer for maximum performance.
 
@@ -51,7 +51,7 @@ Instead of the Python Tier 3 optimizations, we are pivoting to a full C++ networ
 
 ---
 
-## PHASE 2 — Module 2: TimescaleDB Analytics Engine
+## PHASE 2 - Module 2: TimescaleDB Analytics Engine
 
 **Owner:** Member 2
 **Goal:** Consume live trades from LOB via Kafka → persist to TimescaleDB → SQL indicators → REST API
@@ -106,11 +106,11 @@ Instead of the Python Tier 3 optimizations, we are pivoting to a full C++ networ
 ### Verification
 
 - [x] **[M2-VERIFY]** After 1M row load: manually `CALL refresh_continuous_aggregate('ohlcv_1m', ...)`, confirm row counts; verify `ohlcv_1h` has fewer rows than `ohlcv_1m`
-- [x] **[M2-VERIFY]** Run `SELECT compress_chunk(...)` on old chunk; confirm `SELECT * FROM chunk_compression_stats('raw_ticks')` shows `is_compressed = true` — screenshot for report
+- [x] **[M2-VERIFY]** Run `SELECT compress_chunk(...)` on old chunk; confirm `SELECT * FROM chunk_compression_stats('raw_ticks')` shows `is_compressed = true` - screenshot for report
 
 ---
 
-## PHASE 3 — Module 3: Graph + Bellman-Ford *(Primary Production Arbitrage Algorithm)*
+## PHASE 3 - Module 3: Graph + Bellman-Ford *(Primary Production Arbitrage Algorithm)*
 
 **Owner:** Member 3
 **Goal:** Build live FX exchange rate graph in Apache AGE; run Bellman-Ford every 500ms as the PRIMARY arbitrage detector; expose Cypher query interface; provide rate matrix endpoint for Module 4
@@ -119,7 +119,7 @@ Instead of the Python Tier 3 optimizations, we are pivoting to a full C++ networ
 
 ### File: `module3_graph/graph_init.py`
 
-- [ ] **[M3-INIT]** `MERGE` 20 `Asset` nodes via AGE Cypher (idempotent — safe to re-run)
+- [ ] **[M3-INIT]** `MERGE` 20 `Asset` nodes via AGE Cypher (idempotent - safe to re-run)
   - Crypto: BTC, ETH, BNB, SOL, ADA, XRP, DOGE, AVAX, MATIC, DOT
   - Fiat: USD, EUR, GBP, JPY, AUD, CAD, CHF, INR, SGD, HKD
 - [ ] **[M3-INIT]** Create directed `EXCHANGE` edges with properties `{bid, ask, spread, last_updated}`; seed from `gen_ticks.py` last-price or Binance API
@@ -130,7 +130,7 @@ Instead of the Python Tier 3 optimizations, we are pivoting to a full C++ networ
 - [ ] **[M3-EDGE]** asyncio loop every 500ms: `GET http://lob-engine:8001/lob/depth/{symbol}` for each active pair
 - [ ] **[M3-EDGE]** Extract `best_bid = depth["bids"][0][0]`, `best_ask = depth["asks"][0][0]`
 - [ ] **[M3-EDGE]** Cypher `MATCH (a)-[r:EXCHANGE]->(b) SET r.bid=$bid, r.ask=$ask, r.last_updated=timestamp()`
-- [ ] **[M3-EDGE]** LOB unavailable: log warning, skip symbol, keep asyncio loop alive — do NOT crash
+- [ ] **[M3-EDGE]** LOB unavailable: log warning, skip symbol, keep asyncio loop alive - do NOT crash
 - [ ] **[M3-EDGE]** Prometheus gauge: `graph_edge_update_lag_ms`
 - [ ] **[M3-EDGE]** Acceptance: edge `bid` value changes in AGE within 600ms of LOB price change
 
@@ -145,33 +145,33 @@ Instead of the Python Tier 3 optimizations, we are pivoting to a full C++ networ
 
 ### File: `module3_graph/graph_queries.py`
 
-- [ ] **[M3-QUERY]** `find_3hop_arbitrage_cycles(from_symbol)` — all profitable directed 3-hop cycles
-- [ ] **[M3-QUERY]** `find_shortest_path(from_sym, to_sym)` — most profitable exchange route
-- [ ] **[M3-QUERY]** `find_high_spread_edges(threshold)` — edges where `spread > threshold`
-- [ ] **[M3-QUERY]** `crypto_subgraph()` — subgraph of crypto-only Asset nodes
+- [ ] **[M3-QUERY]** `find_3hop_arbitrage_cycles(from_symbol)` - all profitable directed 3-hop cycles
+- [ ] **[M3-QUERY]** `find_shortest_path(from_sym, to_sym)` - most profitable exchange route
+- [ ] **[M3-QUERY]** `find_high_spread_edges(threshold)` - edges where `spread > threshold`
+- [ ] **[M3-QUERY]** `crypto_subgraph()` - subgraph of crypto-only Asset nodes
 
 ### File: `module3_graph/graph_api.py`
 
 - [ ] **[M3-API]** `GET /graph/nodes` → list all Asset vertices
 - [ ] **[M3-API]** `GET /graph/edges` → list EXCHANGE edges with current bid/ask
 - [ ] **[M3-API]** `GET /graph/paths?from_symbol=USD` → run `find_3hop_cycles`
-- [ ] **[M3-API]** `GET /graph/rates` → N×N adjacency matrix JSON — **consumed by Module 4 `quantum_service.py`**
+- [ ] **[M3-API]** `GET /graph/rates` → N×N adjacency matrix JSON - **consumed by Module 4 `quantum_service.py`**
 - [ ] **[M3-API]** `GET /graph/health` → node count + last edge update timestamp
 - [ ] **[M3-API]** Mount under `/graph` in `module5_security/main.py`
 
 ---
 
-## PHASE 4 — Module 4: Quantum Engine *(Research Benchmark vs Bellman-Ford)*
+## PHASE 4 - Module 4: Quantum Engine *(Research Benchmark vs Bellman-Ford)*
 
 **Owner:** Member 4
 **Goal:** Implement Grover's Algorithm as a research benchmark. Run BOTH Bellman-Ford and Grover on the same input. Save both results to `arbitrage_signals`. Generate the scaling comparison chart.
 
-> **Architecture decision (ADR March 9 2026):** Quantum does NOT replace Bellman-Ford. It runs on the same rate matrix from `/graph/rates`, its wall-clock time is recorded alongside Bellman-Ford's, and the report shows the O(√N) vs O(N) complexity proof. AerSimulator is slower than Bellman-Ford — this is expected and documented.
+> **Architecture decision (ADR March 9 2026):** Quantum does NOT replace Bellman-Ford. It runs on the same rate matrix from `/graph/rates`, its wall-clock time is recorded alongside Bellman-Ford's, and the report shows the O(√N) vs O(N) complexity proof. AerSimulator is slower than Bellman-Ford - this is expected and documented.
 
 ### File: `module4_quantum/Dockerfile`
 
 - [ ] **[M4-DOCKER]** Replace placeholder: `FROM python:3.12-slim`, install `numpy qiskit qiskit-aer psycopg[binary]`, copy module, `CMD uvicorn module4_quantum.quantum_api:app --host 0.0.0.0 --port 8004`
-- [ ] **[M4-DOCKER]** **IMPLEMENT `/health` FIRST** — unblocks `fastapi-proxy` startup (BUG-P1-2 fix depends on this)
+- [ ] **[M4-DOCKER]** **IMPLEMENT `/health` FIRST** - unblocks `fastapi-proxy` startup (BUG-P1-2 fix depends on this)
 
 ### File: `module4_quantum/grover_oracle.py`
 
@@ -193,7 +193,7 @@ Instead of the Python Tier 3 optimizations, we are pivoting to a full C++ networ
 - [ ] **[M4-RUN]** Test N=8: correct cycle returned in > 50% of 10 independent runs; runs in < 5s
 - [ ] **[M4-RUN]** Test N=16: correct cycle detected in < 30s
 - [ ] **[M4-RUN]** Test N=32 (`statevector_simulator`): runs in < 120s or reports memory constraint with GB measurement
-- [ ] **[M4-RUN]** Test N=64: runs or reports exact memory constraint — document result
+- [ ] **[M4-RUN]** Test N=64: runs or reports exact memory constraint - document result
 - [ ] **[M4-RUN]** Cap at N=64 maximum (AerSimulator RAM limit)
 
 ### File: `module4_quantum/quantum_service.py`
@@ -216,7 +216,7 @@ Instead of the Python Tier 3 optimizations, we are pivoting to a full C++ networ
 
 ### File: `module4_quantum/quantum_api.py`
 
-- [ ] **[M4-API]** `GET /health` → `{"status":"ok"}` — **implement before anything else**
+- [ ] **[M4-API]** `GET /health` → `{"status":"ok"}` - **implement before anything else**
 - [ ] **[M4-API]** `POST /quantum/run-grover` body `{graph_size_n, method}` → on-demand run
 - [ ] **[M4-API]** `GET /quantum/signals?limit=50&method=QUANTUM|CLASSICAL|ALL` → query `arbitrage_signals`
 - [ ] **[M4-API]** `GET /quantum/benchmark` → latest `benchmark_quantum.csv` rows as JSON
@@ -224,7 +224,7 @@ Instead of the Python Tier 3 optimizations, we are pivoting to a full C++ networ
 
 ---
 
-## PHASE 5 — Module 5: Security Proxy + Observability
+## PHASE 5 - Module 5: Security Proxy + Observability
 
 **Owner:** Member 5
 
@@ -235,7 +235,7 @@ Instead of the Python Tier 3 optimizations, we are pivoting to a full C++ networ
 ### File: `module5_security/rate_limiter.py`
 
 - [ ] **[M5-RL]** Redis sliding window: `INCR rl:{ip}` + `EXPIRE 1s`; block at count > 1,000 → HTTP 429
-- [ ] **[M5-RL]** Redis unavailable: fallback to in-process `threading.Semaphore` token bucket — degraded but not crashed
+- [ ] **[M5-RL]** Redis unavailable: fallback to in-process `threading.Semaphore` token bucket - degraded but not crashed
 - [ ] **[M5-RL]** On block: `INSERT security_events (client_ip, event_type='RATE_LIMIT', endpoint, raw_payload)`
 - [ ] **[M5-RL]** Acceptance: 1,001st request in 1s → HTTP 429; confirmed `security_events` row in DB
 
@@ -262,11 +262,11 @@ Instead of the Python Tier 3 optimizations, we are pivoting to a full C++ networ
 
 ### File: `grafana_provisioning/dashboards/hqt_main.json`
 
-- [ ] **[M5-GRAF]** Panel 1 — Candlestick: `ohlcv_1m` for BTC/USD
-- [ ] **[M5-GRAF]** Panel 2 — Depth Heatmap: LOB `/lob/depth/BTC%2FUSD` live refresh
-- [ ] **[M5-GRAF]** Panel 3 — Volume bars: `SUM(volume)` from `ohlcv_1m` last 1h
-- [ ] **[M5-GRAF]** Panel 4 — Arbitrage Signals table: last 20 rows from `arbitrage_signals`, both `CLASSICAL` and `QUANTUM` methods, colour-coded by `method` column
-- [ ] **[M5-GRAF]** Panel 5 — QPS + p99: `rate(lob_orders_total[1m])` + `histogram_quantile(0.99, rate(lob_order_latency_ms_bucket[1m]))`
+- [ ] **[M5-GRAF]** Panel 1 - Candlestick: `ohlcv_1m` for BTC/USD
+- [ ] **[M5-GRAF]** Panel 2 - Depth Heatmap: LOB `/lob/depth/BTC%2FUSD` live refresh
+- [ ] **[M5-GRAF]** Panel 3 - Volume bars: `SUM(volume)` from `ohlcv_1m` last 1h
+- [ ] **[M5-GRAF]** Panel 4 - Arbitrage Signals table: last 20 rows from `arbitrage_signals`, both `CLASSICAL` and `QUANTUM` methods, colour-coded by `method` column
+- [ ] **[M5-GRAF]** Panel 5 - QPS + p99: `rate(lob_orders_total[1m])` + `histogram_quantile(0.99, rate(lob_order_latency_ms_bucket[1m]))`
 - [ ] **[M5-GRAF]** Create `grafana_provisioning/dashboards/dashboards.yml` provisioning config → dashboard appears at Grafana start without manual import
 
 ### Siege DDoS
@@ -276,11 +276,11 @@ Instead of the Python Tier 3 optimizations, we are pivoting to a full C++ networ
 
 ---
 
-## PHASE 6 — Tests, Report & Demo
+## PHASE 6 - Tests, Report & Demo
 
 ### Unit Tests
 
-- [ ] **[TEST-M1]** `tests/test_lob.py`: place crossing BUY+SELL orders → assert trade fired → assert `raw_ticks` row inserted; edge cases: zero-qty, cancel nonexistent, cross-spread — *all pass via `pytest` + `httpx.AsyncClient`*
+- [ ] **[TEST-M1]** `tests/test_lob.py`: place crossing BUY+SELL orders → assert trade fired → assert `raw_ticks` row inserted; edge cases: zero-qty, cancel nonexistent, cross-spread - *all pass via `pytest` + `httpx.AsyncClient`*
 - [ ] **[TEST-M2]** `tests/test_timescale.py`: insert 10k ticks → assert `ohlcv_1m` refreshes → assert VWAP correct to 4 decimal places vs pandas baseline
 - [ ] **[TEST-M3]** `tests/test_graph.py`: seed 4-node rate matrix with known profitable cycle → assert Bellman-Ford returns correct path + profit_pct; unprofitable graph → returns None
 - [ ] **[TEST-M4]** `tests/test_quantum.py`: same 4-node matrix → assert Grover returns same path as Bellman-Ford within 3 independent runs; `enumerate_cycles` count = P(N,3) for N=4 and N=8
@@ -290,12 +290,12 @@ Instead of the Python Tier 3 optimizations, we are pivoting to a full C++ networ
 
 ### Report
 
-- [ ] **[REPORT]** `report/final_report.md` ≥ 10 pages / ≥ 3,000 words — sections: Architecture, LOB benchmarks, TimescaleDB vs plain PG comparison, Bellman-Ford live arbitrage results, Quantum vs Classical complexity analysis, Security demo
-- [ ] **[REPORT]** Include `benchmark_quantum.png` — BF flat line vs Grover exponential; narrative: "Bellman-Ford is the production algorithm (deterministic, O(N·E), < 5ms). Grover provides a theoretical O(√N) query complexity advantage proven only on real quantum hardware; AerSimulator computes the full state vector classically, producing exponential overhead that inverts this advantage."
-- [ ] **[REPORT]** Include `bench_out/latency_histogram.png` from `ashuwhy/lob` — embed directly from submodule
+- [ ] **[REPORT]** `report/final_report.md` ≥ 10 pages / ≥ 3,000 words - sections: Architecture, LOB benchmarks, TimescaleDB vs plain PG comparison, Bellman-Ford live arbitrage results, Quantum vs Classical complexity analysis, Security demo
+- [ ] **[REPORT]** Include `benchmark_quantum.png` - BF flat line vs Grover exponential; narrative: "Bellman-Ford is the production algorithm (deterministic, O(N·E), < 5ms). Grover provides a theoretical O(√N) query complexity advantage proven only on real quantum hardware; AerSimulator computes the full state vector classically, producing exponential overhead that inverts this advantage."
+- [ ] **[REPORT]** Include `bench_out/latency_histogram.png` from `ashuwhy/lob` - embed directly from submodule
 - [ ] **[REPORT]** Include Grafana screenshots for all 5 panels; include Siege log summary
 - [ ] **[REPORT]** `pandoc --pdf-engine=xelatex report/final_report.md -o report/final_report.pdf` → PDF renders all figures; page count ≥ 10
-- [ ] **[DEMO]** `report/demo_script.md` — ordered 20-minute walkthrough with exact `curl` commands and expected output for each module
+- [ ] **[DEMO]** `report/demo_script.md` - ordered 20-minute walkthrough with exact `curl` commands and expected output for each module
 - [ ] **[DEMO]** Screenshot Grafana Panel 5 during Siege load; save as `report/grafana_siege_screenshot.png`
 
 ### Code Freeze
@@ -307,7 +307,7 @@ Instead of the Python Tier 3 optimizations, we are pivoting to a full C++ networ
 
 ---
 
-## Appendix A — Final File Structure
+## Appendix A - Final File Structure
 
 ```
 hqt/
@@ -387,7 +387,7 @@ hqt/
 
 ---
 
-## Appendix B — Critical Path
+## Appendix B - Critical Path
 
 ```
 Fix BUG-P0-1/P0-2/P0-3 (docker-compose env vars)
@@ -399,9 +399,9 @@ Fix BUG-P1-5 (asyncio loop storage)
 Phase 2 (TimescaleDB pipeline)
         │
         ▼
-Phase 3 (Bellman-Ford LIVE — primary arbitrage running every 500ms)
+Phase 3 (Bellman-Ford LIVE - primary arbitrage running every 500ms)
         │
-        ├─► Phase 4 (Grover benchmark consumes /graph/rates — every 10s)
+        ├─► Phase 4 (Grover benchmark consumes /graph/rates - every 10s)
         │
         ▼
 Phase 5 (Security proxy mounts all 4 modules)
@@ -410,12 +410,12 @@ Phase 5 (Security proxy mounts all 4 modules)
 Phase 6 (Tests + benchmark_quantum.png + report + demo)
         │
         ▼
-    April 15, 2026 — tag v1.0.0, submit
+    April 15, 2026 - tag v1.0.0, submit
 ```
 
 ---
 
-## Appendix C — Week-by-Week Schedule
+## Appendix C - Week-by-Week Schedule
 
 | Week | Dates | Milestone |
 |------|-------|-----------|

@@ -1,7 +1,7 @@
 """
 tests.test_timescale
 ~~~~~~~~~~~~~~~~~~~~
-Integration tests for Module 2 — TimescaleDB Data Layer.
+Integration tests for Module 2 - TimescaleDB Data Layer.
 
 Tests cover:
   - Bulk insert + VWAP validation against pandas

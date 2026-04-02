@@ -1,5 +1,5 @@
 """
-Smart Backfiller — automatically detects gaps in raw_ticks and fills them
+Smart Backfiller - automatically detects gaps in raw_ticks and fills them
 using the Kraken REST API.
 
 Runs as a background asyncio task inside the analytics_api.  Every

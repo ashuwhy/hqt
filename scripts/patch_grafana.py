@@ -116,11 +116,11 @@ def quantum_row(base_y: int) -> list:
         {
             "id": 400,
             "type": "row",
-            "title": "🔬 Quantum Engine — Classical vs Quantum Complexity",
+            "title": "🔬 Quantum Engine - Classical vs Quantum Complexity",
             "collapsed": False,
             "gridPos": {"x": 0, "y": base_y, "w": 24, "h": 1},
         },
-        # Q1 — benchmark table
+        # Q1 - benchmark table
         {
             "id": 401,
             "type": "table",
@@ -157,7 +157,7 @@ def quantum_row(base_y: int) -> list:
             "options": {"showHeader": True, "sortBy": [{"displayName": "N", "desc": False}]},
             "gridPos": {"x": 0, "y": base_y + 1, "w": 14, "h": 9},
         },
-        # Q2 — BF p99 @ N=20
+        # Q2 - BF p99 @ N=20
         {
             "id": 402,
             "type": "stat",
@@ -174,7 +174,7 @@ def quantum_row(base_y: int) -> list:
             "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "background", "graphMode": "none", "textMode": "value_and_name", "justifyMode": "center"},
             "gridPos": {"x": 14, "y": base_y + 1, "w": 5, "h": 4},
         },
-        # Q3 — circuit depth @ N=32
+        # Q3 - circuit depth @ N=32
         {
             "id": 403,
             "type": "stat",
@@ -191,7 +191,7 @@ def quantum_row(base_y: int) -> list:
             "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "background", "graphMode": "none", "textMode": "value_and_name", "justifyMode": "center"},
             "gridPos": {"x": 19, "y": base_y + 1, "w": 5, "h": 4},
         },
-        # Q4 — qubits @ N=32
+        # Q4 - qubits @ N=32
         {
             "id": 404,
             "type": "stat",
@@ -208,7 +208,7 @@ def quantum_row(base_y: int) -> list:
             "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "background", "graphMode": "none", "textMode": "value_and_name", "justifyMode": "center"},
             "gridPos": {"x": 14, "y": base_y + 5, "w": 5, "h": 4},
         },
-        # Q5 — Grover overhead @ N=32
+        # Q5 - Grover overhead @ N=32
         {
             "id": 405,
             "type": "stat",
@@ -226,7 +226,7 @@ def quantum_row(base_y: int) -> list:
             "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "background", "graphMode": "none", "textMode": "value_and_name", "justifyMode": "center"},
             "gridPos": {"x": 19, "y": base_y + 5, "w": 5, "h": 4},
         },
-        # Q6 — explanatory text
+        # Q6 - explanatory text
         {
             "id": 406,
             "type": "text",
@@ -237,7 +237,7 @@ def quantum_row(base_y: int) -> list:
                     "**Why is Grover slower on AerSimulator?**  \n"
                     "AerSimulator computes the full 2ⁿ-element state vector classically, "
                     "producing **O(2ⁿ) overhead** per iteration. "
-                    "On *real quantum hardware*, Grover's oracle query complexity is **O(√N)** — "
+                    "On *real quantum hardware*, Grover's oracle query complexity is **O(√N)** - "
                     "a quadratic speedup over classical search. "
                     "The divergence between the two lines in the benchmark chart is the research result: "
                     "it isolates simulator overhead from the theoretical quantum advantage."
@@ -259,7 +259,7 @@ def security_row(base_y: int) -> list:
             "collapsed": False,
             "gridPos": {"x": 0, "y": base_y, "w": 24, "h": 1},
         },
-        # S1 — SQL injections
+        # S1 - SQL injections
         {
             "id": 501,
             "type": "stat",
@@ -276,7 +276,7 @@ def security_row(base_y: int) -> list:
             "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "background", "graphMode": "none", "textMode": "value_and_name", "justifyMode": "center"},
             "gridPos": {"x": 0, "y": base_y + 1, "w": 6, "h": 5},
         },
-        # S2 — rate limit hits
+        # S2 - rate limit hits
         {
             "id": 502,
             "type": "stat",
@@ -293,7 +293,7 @@ def security_row(base_y: int) -> list:
             "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "background", "graphMode": "none", "textMode": "value_and_name", "justifyMode": "center"},
             "gridPos": {"x": 6, "y": base_y + 1, "w": 6, "h": 5},
         },
-        # S3 — proxy QPS
+        # S3 - proxy QPS
         {
             "id": 503,
             "type": "timeseries",
@@ -309,7 +309,7 @@ def security_row(base_y: int) -> list:
             "options": {"tooltip": {"mode": "single"}, "legend": {"displayMode": "list", "placement": "bottom"}},
             "gridPos": {"x": 12, "y": base_y + 1, "w": 12, "h": 5},
         },
-        # S4 — p99 latency
+        # S4 - p99 latency
         {
             "id": 504,
             "type": "timeseries",
@@ -326,7 +326,7 @@ def security_row(base_y: int) -> list:
             "options": {"tooltip": {"mode": "single"}, "legend": {"displayMode": "list", "placement": "bottom"}},
             "gridPos": {"x": 0, "y": base_y + 6, "w": 12, "h": 7},
         },
-        # S5 — security events table
+        # S5 - security events table
         {
             "id": 505,
             "type": "table",
@@ -368,7 +368,7 @@ def main() -> None:
     panels = data["panels"]
 
     if already_patched(panels):
-        print("Dashboard already patched — nothing to do.")
+        print("Dashboard already patched - nothing to do.")
         return
 
     # 1. Shift all existing panels down to make room for the hero row

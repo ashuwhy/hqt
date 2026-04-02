@@ -163,7 +163,7 @@ def _get_db_conn() -> psycopg.Connection:
 # ─── Main service loop ────────────────────────────────────────────────────────
 
 async def quantum_loop(interval: float = 10.0) -> None:
-    """Main service loop — runs forever.
+    """Main service loop - runs forever.
 
     Every *interval* seconds:
       1. Fetch the FX rate matrix from graph-service
@@ -194,7 +194,7 @@ async def quantum_loop(interval: float = 10.0) -> None:
 
             graph_size_n = len(nodes)
             if graph_size_n < 3:
-                logger.debug("quantum_loop: only %d nodes — skipping", graph_size_n)
+                logger.debug("quantum_loop: only %d nodes - skipping", graph_size_n)
                 await asyncio.sleep(interval)
                 continue
 

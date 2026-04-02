@@ -4,11 +4,11 @@ module3_graph.graph_init
 Idempotent initialisation of the Apache AGE FX graph.
 
 * MERGE 20 Asset nodes  (10 crypto + 10 fiat)
-* MERGE directed EXCHANGE edges — seeded with **real** rates from:
+* MERGE directed EXCHANGE edges - seeded with **real** rates from:
     - Kraken REST API               (crypto → USD pairs)
     - Alpha Vantage FX API          (fiat real-time bid/ask)
     - Calculated cross-rates        (crypto↔crypto, crypto↔fiat via USD)
-* Safe to re-run at any time — uses MERGE, never duplicates.
+* Safe to re-run at any time - uses MERGE, never duplicates.
 
 Usage (standalone):
     python -m module3_graph.graph_init
@@ -81,7 +81,7 @@ def _fetch_kraken_prices() -> dict[str, tuple[float, float]]:
                 logger.info("  %s/USD  bid=%.6f  ask=%.6f", symbol, bid, ask)
         return result
     except Exception as exc:
-        logger.warning("Kraken fetch failed: %s — will use fallback rates", exc)
+        logger.warning("Kraken fetch failed: %s - will use fallback rates", exc)
         return {}
 
 
@@ -148,7 +148,7 @@ def _fetch_fiat_rates() -> dict[str, dict[str, float]]:
                 result[ccy] = {"bid": rate - spread/2, "ask": rate + spread/2, "rate": rate}
                 logger.info("  USD/%s = %.6f (ECB mid)", ccy, rate)
         except Exception as exc:
-            logger.warning("Frankfurter also failed: %s — using fallbacks", exc)
+            logger.warning("Frankfurter also failed: %s - using fallbacks", exc)
 
     return result
 
@@ -328,7 +328,7 @@ def init_graph(conn: psycopg.Connection | None = None) -> dict:
         own_conn = True
 
     try:
-        # 0. Ensure the AGE graph exists (idempotent — safe to re-run)
+        # 0. Ensure the AGE graph exists (idempotent - safe to re-run)
         with conn.cursor() as cur:
             cur.execute("SET search_path = ag_catalog, \"$user\", public;")
             cur.execute("LOAD 'age';")

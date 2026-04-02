@@ -6,7 +6,7 @@
 
 ---
 
-## 0 — Pre-demo checklist (5 min before)
+## 0 - Pre-demo checklist (5 min before)
 
 ```bash
 docker compose ps                          # all services must show healthy/running
@@ -18,7 +18,7 @@ Open tabs: Grafana (:3000), this script.
 
 ---
 
-## 1 — Show all 5 modules are live (2 min)
+## 1 - Show all 5 modules are live (2 min)
 
 ```bash
 # Verify all services healthy
@@ -28,37 +28,37 @@ docker compose ps --format "table {{.Name}}\t{{.Status}}"
 Expected: 12 services, all `Up` or `healthy`.
 
 ```bash
-# Module 1 — LOB engine
+# Module 1 - LOB engine
 curl -s http://localhost:8001/lob/health | python3 -m json.tool
 ```
 Expected: `{"status": "ok", ...}`
 
 ```bash
-# Module 2 — TimescaleDB analytics
+# Module 2 - TimescaleDB analytics
 curl -s http://localhost:8002/analytics/health | python3 -m json.tool
 ```
 Expected: `{"status": "ok", "row_count": <N>}`
 
 ```bash
-# Module 3 — Graph service
+# Module 3 - Graph service
 curl -s http://localhost:8003/graph/health | python3 -m json.tool
 ```
 Expected: `{"status": "ok", "node_count": 20, ...}`
 
 ```bash
-# Module 4 — Quantum engine
+# Module 4 - Quantum engine
 curl -s http://localhost:8004/health | python3 -m json.tool
 ```
 Expected: `{"status": "ok"}`
 
 ```bash
-# Module 5 — Security proxy (routes all traffic)
+# Module 5 - Security proxy (routes all traffic)
 curl -s http://localhost:8000/health | python3 -m json.tool
 ```
 
 ---
 
-## 2 — Place LOB orders and show depth (3 min)
+## 2 - Place LOB orders and show depth (3 min)
 
 ```bash
 # Place a passive sell
@@ -81,7 +81,7 @@ curl -s http://localhost:8000/lob/depth/BTC%2FUSD | python3 -m json.tool
 
 ---
 
-## 3 — Show TimescaleDB ingestion (2 min)
+## 3 - Show TimescaleDB ingestion (2 min)
 
 ```bash
 # Count rows in raw_ticks (should be growing)
@@ -99,7 +99,7 @@ Switch to Grafana → scroll to candlestick panel.
 
 ---
 
-## 4 — Show live arbitrage signals (3 min)
+## 4 - Show live arbitrage signals (3 min)
 
 ```bash
 # Query arbitrage_signals directly
@@ -109,11 +109,11 @@ docker compose exec postgres psql -U hqt -d hqt -c \
 
 Switch to Grafana → scroll to **Graph Arbitrage Engine** section → show the timeline panel updating.
 
-**Talk track:** "Module 3 maintains a 20-node Apache AGE graph of FX exchange rates updated every 500ms from the LOB. Bellman-Ford runs on this graph every 500ms using a −log(rate) weight transformation — a negative cycle in the transformed graph means a profitable arbitrage cycle in the real market."
+**Talk track:** "Module 3 maintains a 20-node Apache AGE graph of FX exchange rates updated every 500ms from the LOB. Bellman-Ford runs on this graph every 500ms using a −log(rate) weight transformation - a negative cycle in the transformed graph means a profitable arbitrage cycle in the real market."
 
 ---
 
-## 5 — Security demo: SQL injection blocked (3 min)
+## 5 - Security demo: SQL injection blocked (3 min)
 
 ```bash
 # Attempt SQL injection in the order symbol field
@@ -133,37 +133,37 @@ docker compose exec postgres psql -U hqt -d hqt -c \
 
 Switch to Grafana → **Security & Observability** section → show the SQL Injections Blocked counter increment.
 
-**Talk track:** "Module 5 is a FastAPI reverse proxy. The SQL firewall uses sqlglot to parse the AST of any string that looks like SQL — it caught the DROP TABLE attempt before it reached any backend service."
+**Talk track:** "Module 5 is a FastAPI reverse proxy. The SQL firewall uses sqlglot to parse the AST of any string that looks like SQL - it caught the DROP TABLE attempt before it reached any backend service."
 
 ---
 
-## 6 — Quantum benchmark (3 min)
+## 6 - Quantum benchmark (3 min)
 
 Switch to Grafana → **Quantum Engine** section → show the benchmark table.
 
-**Talk track:** "Module 4 runs Grover's Algorithm on the same rate matrix that Bellman-Ford uses. At N=32 nodes: Bellman-Ford completes in 3.5ms, Grover takes 20,373ms on AerSimulator — 5,848× slower. This is because AerSimulator maintains a 65,536-element state vector classically. On real quantum hardware, the same circuit would execute in O(√N) oracle calls, providing a quadratic speedup. The benchmark quantifies exactly what near-term quantum advantage we'd need to unlock."
+**Talk track:** "Module 4 runs Grover's Algorithm on the same rate matrix that Bellman-Ford uses. At N=32 nodes: Bellman-Ford completes in 3.5ms, Grover takes 20,373ms on AerSimulator - 5,848× slower. This is because AerSimulator maintains a 65,536-element state vector classically. On real quantum hardware, the same circuit would execute in O(√N) oracle calls, providing a quadratic speedup. The benchmark quantifies exactly what near-term quantum advantage we'd need to unlock."
 
 Open `module4_quantum/bench_out/benchmark_quantum.png` alongside the live Grafana table.
 
 ---
 
-## 7 — Hero row summary (2 min)
+## 7 - Hero row summary (2 min)
 
 Scroll Grafana back to the top → **System Overview** row.
 
 Point to each tile:
-1. **LOB Throughput** — live orders/sec from Prometheus
-2. **TimescaleDB Speedup** — 37× from benchmark data
-3. **Arb Signals (24h)** — CLASSICAL signals detected today
-4. **Grover Overhead @N=32** — 5,848× from benchmark data
-5. **SQL Injections Blocked** — 1 (the one we just fired)
-6. **Services Up** — 5/5 modules healthy
+1. **LOB Throughput** - live orders/sec from Prometheus
+2. **TimescaleDB Speedup** - 37× from benchmark data
+3. **Arb Signals (24h)** - CLASSICAL signals detected today
+4. **Grover Overhead @N=32** - 5,848× from benchmark data
+5. **SQL Injections Blocked** - 1 (the one we just fired)
+6. **Services Up** - 5/5 modules healthy
 
-**Talk track:** "All five modules — LOB, TimescaleDB, AGE graph, quantum engine, security proxy — are running and observable from a single Grafana dashboard."
+**Talk track:** "All five modules - LOB, TimescaleDB, AGE graph, quantum engine, security proxy - are running and observable from a single Grafana dashboard."
 
 ---
 
-## Appendix — Useful commands during Q&A
+## Appendix - Useful commands during Q&A
 
 ```bash
 # Show graph nodes

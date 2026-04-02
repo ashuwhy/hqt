@@ -1,7 +1,7 @@
 """
 module3_graph.bellman_ford
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
-PRIMARY ARBITRAGE ENGINE — Bellman-Ford negative-cycle detection.
+PRIMARY ARBITRAGE ENGINE - Bellman-Ford negative-cycle detection.
 
 Architecture decision (ADR March 9 2026):
     Bellman-Ford is the production algorithm.  It runs continuously,
@@ -68,7 +68,7 @@ def bellman_ford_arbitrage(
     Returns the cycle path as a list of symbols if a profitable cycle
     exists, otherwise ``None``.
 
-    Complexity: O(V * E) — runs in < 5 ms for N ≤ 20 nodes.
+    Complexity: O(V * E) - runs in < 5 ms for N ≤ 20 nodes.
     """
     if not rates or not nodes:
         return None
@@ -99,7 +99,7 @@ def bellman_ford_arbitrage(
             if not updated:
                 break
 
-        # Nth pass — detect negative cycle
+        # Nth pass - detect negative cycle
         for u, v, w in edges:
             if dist[u] + w < dist[v] - 1e-12:
                 cycle = extract_cycle(pred, v, n, nodes)

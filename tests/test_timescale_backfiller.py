@@ -108,6 +108,6 @@ def test_kafka_parser_missing_fields():
     }).encode()
 
     parsed = _parse_message(raw)
-    # Parser should either return None or raise — but not return a dict without 'price'
+    # Parser should either return None or raise - but not return a dict without 'price'
     if parsed is not None:
         assert "price" in parsed, "Parsed result must include 'price' if not None"

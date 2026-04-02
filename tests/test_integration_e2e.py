@@ -91,7 +91,7 @@ async def test_e2e_graph_health_from_proxy(proxy_client: httpx.AsyncClient):
     """Security proxy → graph-service /graph/health must return 200."""
     resp = await proxy_client.get("/graph/health")
     if resp.status_code == 502:
-        pytest.skip("graph-service not reachable through proxy — skipping")
+        pytest.skip("graph-service not reachable through proxy - skipping")
     assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
     body = resp.json()
     assert body.get("status") == "ok"
@@ -102,7 +102,7 @@ async def test_e2e_quantum_health_from_proxy(proxy_client: httpx.AsyncClient):
     resp = await proxy_client.get("/quantum/health")
     assert resp.status_code == 200, (
         f"Quantum health through proxy returned {resp.status_code}: {resp.text}\n"
-        f"quantum_api.py registers both /health and /quantum/health — "
+        f"quantum_api.py registers both /health and /quantum/health - "
         f"check that fastapi-proxy routes /quantum/* to quantum-engine:8004"
     )
     body = resp.json()
@@ -134,9 +134,9 @@ async def test_e2e_full_arbitrage_signal_flow(db_conn: psycopg.Connection):
 
     assert row is not None, "arbitrage_signals query returned no row"
     count = int(row[0])
-    # The table must have at least one CLASSICAL signal — the detector runs every 500ms
+    # The table must have at least one CLASSICAL signal - the detector runs every 500ms
     assert count > 0, (
-        f"No CLASSICAL signals in arbitrage_signals after waiting — "
+        f"No CLASSICAL signals in arbitrage_signals after waiting - "
         f"Bellman-Ford detector may not be running (count={count})"
     )
 

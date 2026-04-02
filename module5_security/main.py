@@ -1,5 +1,5 @@
 """
-HQT Security Proxy — Central API gateway.
+HQT Security Proxy - Central API gateway.
 
 Routes traffic to backend microservices:
     /lob/*       → lob-engine:8001
@@ -169,7 +169,7 @@ async def get_security_events(limit: int = Query(default=100, ge=1, le=1000)):
         finally:
             await conn.close()
     except asyncpg.exceptions.UndefinedTableError:
-        logger.info("security_events table does not exist yet — returning empty list")
+        logger.info("security_events table does not exist yet - returning empty list")
         return {"events": [], "count": 0}
     except Exception as exc:
         logger.error("Failed to query security_events: %s", exc)
@@ -198,7 +198,7 @@ async def get_benchmark_runs(limit: int = Query(default=50, ge=1, le=500)):
         finally:
             await conn.close()
     except asyncpg.exceptions.UndefinedTableError:
-        logger.info("benchmark_runs table does not exist yet — returning empty list")
+        logger.info("benchmark_runs table does not exist yet - returning empty list")
         return {"runs": [], "count": 0}
     except Exception as exc:
         logger.error("Failed to query benchmark_runs: %s", exc)

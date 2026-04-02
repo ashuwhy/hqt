@@ -160,10 +160,10 @@ def main() -> None:
         
         if latest_ts and latest_ts > max_days_back:
             start_fetch_ts = latest_ts
-            log.info("=== %s (%s) — DB has data. Appending from %s ===", symbol, pair, start_fetch_ts.isoformat())
+            log.info("=== %s (%s) - DB has data. Appending from %s ===", symbol, pair, start_fetch_ts.isoformat())
         else:
             start_fetch_ts = max_days_back
-            log.info("=== %s (%s) — DB empty or too old. Fetching %d days back from %s ===", symbol, pair, DAYS_BACK, start_fetch_ts.isoformat())
+            log.info("=== %s (%s) - DB empty or too old. Fetching %d days back from %s ===", symbol, pair, DAYS_BACK, start_fetch_ts.isoformat())
 
         refresh_start = min(refresh_start, start_fetch_ts)
         since_ns = int(start_fetch_ts.timestamp() * 1e9)
@@ -177,7 +177,7 @@ def main() -> None:
             try:
                 trades, new_cursor = fetch_page(QUERY_PAIRS[pair], pair, cursor)
             except Exception as exc:
-                log.warning("Request failed: %s — sleeping 5s", exc)
+                log.warning("Request failed: %s - sleeping 5s", exc)
                 time.sleep(5)
                 continue
 
@@ -202,10 +202,10 @@ def main() -> None:
             )
 
             if new_cursor == cursor:
-                log.info("[%s] Cursor did not advance — finished.", symbol)
+                log.info("[%s] Cursor did not advance - finished.", symbol)
                 break
             if new_cursor >= int(now.timestamp() * 1e9):
-                log.info("[%s] Reached present time — finished.", symbol)
+                log.info("[%s] Reached present time - finished.", symbol)
                 break
 
             cursor = new_cursor

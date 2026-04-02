@@ -1,5 +1,5 @@
 """
-Tests for M5 Security middleware — sql_firewall, rate_limiter, and the proxy app.
+Tests for M5 Security middleware - sql_firewall, rate_limiter, and the proxy app.
 
 Run with:
     python -m pytest tests/test_security.py -v
@@ -46,7 +46,7 @@ def _make_mock_request(
 # ── SQL Firewall tests ────────────────────────────────────────────────────────
 
 class TestSQLFirewall:
-    """Unit tests for sql_firewall_middleware — no HTTP server needed."""
+    """Unit tests for sql_firewall_middleware - no HTTP server needed."""
 
     @pytest.mark.asyncio
     async def test_clean_request_passes(self):
@@ -159,7 +159,7 @@ class TestSQLFirewall:
         ok_response = MagicMock()
         call_next = AsyncMock(return_value=ok_response)
         result = await fw_module.sql_firewall_middleware(req, call_next)
-        # XSS is not SQL injection — should pass through
+        # XSS is not SQL injection - should pass through
         call_next.assert_awaited_once()
         assert result is ok_response
 
@@ -174,7 +174,7 @@ class TestSQLFirewall:
         # This might get caught by BANNED_PATTERNS if "SELECT" alone is banned,
         # but our firewall only bans "UNION SELECT", not standalone "SELECT"
         # So it should pass through
-        # If it doesn't pass, the firewall is being too aggressive — still valid test
+        # If it doesn't pass, the firewall is being too aggressive - still valid test
 
 
 # ── Rate Limiter tests ────────────────────────────────────────────────────────

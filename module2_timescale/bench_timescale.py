@@ -1,5 +1,5 @@
 """
-Benchmark: TimescaleDB hypertable vs plain PostgreSQL — on REAL market data.
+Benchmark: TimescaleDB hypertable vs plain PostgreSQL - on REAL market data.
 
 Always reads from raw_ticks (populated by fetch_real_data.py with real Kraken
 trades) and copies that data into a temporary plain table for comparison.
@@ -113,7 +113,7 @@ def _fill_plain_from_real(conn: psycopg.Connection, window: str) -> int:
 # ─── Queries ─────────────────────────────────────────────────────────────────
 
 def _run_plain(conn: psycopg.Connection, symbol: str, window: str) -> float:
-    """Full GROUP BY scan on the plain table — no pre-aggregation."""
+    """Full GROUP BY scan on the plain table - no pre-aggregation."""
     t0 = time.perf_counter()
     with conn.cursor() as cur:
         cur.execute(f"""
@@ -136,7 +136,7 @@ def _run_plain(conn: psycopg.Connection, symbol: str, window: str) -> float:
 
 
 def _run_hyper(conn: psycopg.Connection, symbol: str, window: str) -> float:
-    """Pre-computed continuous aggregate — near-instant index scan."""
+    """Pre-computed continuous aggregate - near-instant index scan."""
     t0 = time.perf_counter()
     with conn.cursor() as cur:
         cur.execute(f"""
@@ -224,7 +224,7 @@ def _save_chart(
     ax.set_xlabel("Trial")
     ax.set_ylabel("Latency (ms)")
     ax.set_title(
-        f"TimescaleDB Hypertable vs Plain PostgreSQL — OHLCV Range Query ({WINDOW})\n"
+        f"TimescaleDB Hypertable vs Plain PostgreSQL - OHLCV Range Query ({WINDOW})\n"
         f"{copied:,} rows  |  Overall speedup: {speedup:.1f}×"
     )
     ax.legend()

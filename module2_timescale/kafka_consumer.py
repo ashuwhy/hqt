@@ -73,7 +73,7 @@ def _parse_message(raw: bytes) -> dict | None:
             "exchange": "KRAKEN",
         }
     except (json.JSONDecodeError, KeyError, ValueError, TypeError) as exc:
-        logger.warning("Malformed message skipped: %s — %s", exc, raw[:200])
+        logger.warning("Malformed message skipped: %s - %s", exc, raw[:200])
         return None
 
 
@@ -119,14 +119,14 @@ def _verify_hypertable(conn: psycopg.Connection) -> None:
         cur.execute("SELECT count(*) FROM raw_ticks")
         row_count = cur.fetchone()[0]
         logger.info(
-            "raw_ticks hypertable verified — %d chunks, %d rows",
+            "raw_ticks hypertable verified - %d chunks, %d rows",
             chunk_count,
             row_count,
         )
 
 
 async def run_consumer() -> None:
-    """Main consumer loop — runs forever as a background asyncio task."""
+    """Main consumer loop - runs forever as a background asyncio task."""
     logger.info("Starting Kafka consumer on topic=%s group=%s", TOPIC, GROUP_ID)
 
     # ── Retry loop for Kafka connection ──────────────────────────────────────
@@ -173,7 +173,7 @@ async def run_consumer() -> None:
             msg = consumer.poll(timeout=POLL_TIMEOUT_S)
 
             if msg is None:
-                # Timeout — flush whatever we have
+                # Timeout - flush whatever we have
                 if batch:
                     inserted = _bulk_insert(conn, batch)
                     for r in batch:

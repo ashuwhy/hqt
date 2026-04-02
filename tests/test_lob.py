@@ -1,7 +1,7 @@
 """
 tests.test_lob
 ~~~~~~~~~~~~~~
-Integration tests for Module 1 — C++ Limit Order Book Engine.
+Integration tests for Module 1 - C++ Limit Order Book Engine.
 
 All tests require the Docker stack (lob-engine + postgres) to be running.
 Run with:
@@ -139,7 +139,7 @@ async def test_lob_market_order_immediate_fill(lob_client: httpx.AsyncClient, ge
     resp = await lob_client.post("/lob/order", json=buy)
     assert resp.status_code in (200, 201)
 
-    # The sell should be partially filled — remaining qty = 3.0
+    # The sell should be partially filled - remaining qty = 3.0
     depth = await lob_client.get(f"/lob/depth/{symbol}")
     assert depth.status_code == 200
     body = depth.json()
@@ -188,7 +188,7 @@ async def test_lob_modify_order_price(lob_client: httpx.AsyncClient, generate_sy
     # The C++ server uses an auto-increment ID that's not returned in the response body.
     # This test validates that the endpoint exists and accepts PATCH operations.
 
-    # Check depth before — should have our bid
+    # Check depth before - should have our bid
     depth1 = await lob_client.get(f"/lob/depth/{symbol}")
     assert depth1.status_code == 200
     bids_before = depth1.json().get("bids", [])

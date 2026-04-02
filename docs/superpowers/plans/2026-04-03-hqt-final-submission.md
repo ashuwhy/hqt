@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Produce a submission-ready HQT system with an expanded Grafana dashboard (hero stats, quantum benchmark, security panels), a complete ≥10-page final report, E2E test fixes, and a demo script — all before April 15 2026.
+**Goal:** Produce a submission-ready HQT system with an expanded Grafana dashboard (hero stats, quantum benchmark, security panels), a complete ≥10-page final report, E2E test fixes, and a demo script - all before April 15 2026.
 
 **Architecture:** Five deliverables: (1) a new `benchmark_quantum_results` DB table + seed script so Grafana can query benchmark data; (2) three new Grafana dashboard sections injected via a Python patcher script; (3) three targeted E2E test fixes; (4) `report/final_report.md` written in full; (5) `report/demo_script.md` for the live professor demo.
 
@@ -24,7 +24,7 @@
 
 ---
 
-## Task 1 — `benchmark_quantum_results` table + seed script
+## Task 1 - `benchmark_quantum_results` table + seed script
 
 **Files:**
 - Modify: `init.sql`
@@ -172,7 +172,7 @@ git commit -m "feat: add benchmark_quantum_results table and CSV seed script"
 
 ---
 
-## Task 2 — Grafana dashboard patcher
+## Task 2 - Grafana dashboard patcher
 
 **Files:**
 - Create: `scripts/patch_grafana.py`
@@ -302,11 +302,11 @@ def quantum_row(base_y: int) -> list:
         {
             "id": 400,
             "type": "row",
-            "title": "🔬 Quantum Engine — Classical vs Quantum Complexity",
+            "title": "🔬 Quantum Engine - Classical vs Quantum Complexity",
             "collapsed": False,
             "gridPos": {"x": 0, "y": base_y, "w": 24, "h": 1},
         },
-        # Q1 — benchmark table
+        # Q1 - benchmark table
         {
             "id": 401,
             "type": "table",
@@ -343,7 +343,7 @@ def quantum_row(base_y: int) -> list:
             "options": {"showHeader": True, "sortBy": [{"displayName": "N", "desc": False}]},
             "gridPos": {"x": 0, "y": base_y + 1, "w": 14, "h": 9},
         },
-        # Q2 — BF p99 @ N=20
+        # Q2 - BF p99 @ N=20
         {
             "id": 402,
             "type": "stat",
@@ -360,7 +360,7 @@ def quantum_row(base_y: int) -> list:
             "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "background", "graphMode": "none", "textMode": "value_and_name", "justifyMode": "center"},
             "gridPos": {"x": 14, "y": base_y + 1, "w": 5, "h": 4},
         },
-        # Q3 — circuit depth @ N=32
+        # Q3 - circuit depth @ N=32
         {
             "id": 403,
             "type": "stat",
@@ -377,7 +377,7 @@ def quantum_row(base_y: int) -> list:
             "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "background", "graphMode": "none", "textMode": "value_and_name", "justifyMode": "center"},
             "gridPos": {"x": 19, "y": base_y + 1, "w": 5, "h": 4},
         },
-        # Q4 — qubits @ N=32
+        # Q4 - qubits @ N=32
         {
             "id": 404,
             "type": "stat",
@@ -394,7 +394,7 @@ def quantum_row(base_y: int) -> list:
             "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "background", "graphMode": "none", "textMode": "value_and_name", "justifyMode": "center"},
             "gridPos": {"x": 14, "y": base_y + 5, "w": 5, "h": 4},
         },
-        # Q5 — Grover overhead @ N=32
+        # Q5 - Grover overhead @ N=32
         {
             "id": 405,
             "type": "stat",
@@ -412,7 +412,7 @@ def quantum_row(base_y: int) -> list:
             "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "background", "graphMode": "none", "textMode": "value_and_name", "justifyMode": "center"},
             "gridPos": {"x": 19, "y": base_y + 5, "w": 5, "h": 4},
         },
-        # Q6 — explanatory text
+        # Q6 - explanatory text
         {
             "id": 406,
             "type": "text",
@@ -423,7 +423,7 @@ def quantum_row(base_y: int) -> list:
                     "**Why is Grover slower on AerSimulator?**  \n"
                     "AerSimulator computes the full 2ⁿ-element state vector classically, "
                     "producing **O(2ⁿ) overhead** per iteration. "
-                    "On *real quantum hardware*, Grover's oracle query complexity is **O(√N)** — "
+                    "On *real quantum hardware*, Grover's oracle query complexity is **O(√N)** - "
                     "a quadratic speedup over classical search. "
                     "The divergence between the two lines in the benchmark chart is the research result: "
                     "it isolates simulator overhead from the theoretical quantum advantage."
@@ -445,7 +445,7 @@ def security_row(base_y: int) -> list:
             "collapsed": False,
             "gridPos": {"x": 0, "y": base_y, "w": 24, "h": 1},
         },
-        # S1 — SQL injections
+        # S1 - SQL injections
         {
             "id": 501,
             "type": "stat",
@@ -462,7 +462,7 @@ def security_row(base_y: int) -> list:
             "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "background", "graphMode": "none", "textMode": "value_and_name", "justifyMode": "center"},
             "gridPos": {"x": 0, "y": base_y + 1, "w": 6, "h": 5},
         },
-        # S2 — rate limit hits
+        # S2 - rate limit hits
         {
             "id": 502,
             "type": "stat",
@@ -479,7 +479,7 @@ def security_row(base_y: int) -> list:
             "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "background", "graphMode": "none", "textMode": "value_and_name", "justifyMode": "center"},
             "gridPos": {"x": 6, "y": base_y + 1, "w": 6, "h": 5},
         },
-        # S3 — proxy QPS
+        # S3 - proxy QPS
         {
             "id": 503,
             "type": "timeseries",
@@ -495,7 +495,7 @@ def security_row(base_y: int) -> list:
             "options": {"tooltip": {"mode": "single"}, "legend": {"displayMode": "list", "placement": "bottom"}},
             "gridPos": {"x": 12, "y": base_y + 1, "w": 12, "h": 5},
         },
-        # S4 — p99 latency
+        # S4 - p99 latency
         {
             "id": 504,
             "type": "timeseries",
@@ -512,7 +512,7 @@ def security_row(base_y: int) -> list:
             "options": {"tooltip": {"mode": "single"}, "legend": {"displayMode": "list", "placement": "bottom"}},
             "gridPos": {"x": 0, "y": base_y + 6, "w": 12, "h": 7},
         },
-        # S5 — security events table
+        # S5 - security events table
         {
             "id": 505,
             "type": "table",
@@ -554,7 +554,7 @@ def main() -> None:
     panels = data["panels"]
 
     if already_patched(panels):
-        print("Dashboard already patched — nothing to do.")
+        print("Dashboard already patched - nothing to do.")
         return
 
     # 1. Shift all existing panels down to make room for the hero row
@@ -629,12 +629,12 @@ git commit -m "feat: add hero row, quantum engine, and security panels to Grafan
 
 ---
 
-## Task 3 — Fix E2E tests
+## Task 3 - Fix E2E tests
 
 **Files:**
 - Modify: `tests/test_integration_e2e.py`
 
-- [ ] **Step 1: Fix `test_e2e_full_arbitrage_signal_flow` — assert count > 0**
+- [ ] **Step 1: Fix `test_e2e_full_arbitrage_signal_flow` - assert count > 0**
 
 In `tests/test_integration_e2e.py`, find the line:
 ```python
@@ -643,12 +643,12 @@ In `tests/test_integration_e2e.py`, find the line:
 Replace with:
 ```python
     assert count > 0, (
-        f"No CLASSICAL signals in arbitrage_signals after waiting — "
+        f"No CLASSICAL signals in arbitrage_signals after waiting - "
         f"Bellman-Ford detector may not be running (count={count})"
     )
 ```
 
-- [ ] **Step 2: Fix `test_e2e_analytics_health_from_proxy` — remove 404 acceptance**
+- [ ] **Step 2: Fix `test_e2e_analytics_health_from_proxy` - remove 404 acceptance**
 
 Find:
 ```python
@@ -662,19 +662,19 @@ Replace with:
     )
 ```
 
-- [ ] **Step 3: Fix `test_e2e_quantum_health_from_proxy` — remove skip on 502**
+- [ ] **Step 3: Fix `test_e2e_quantum_health_from_proxy` - remove skip on 502**
 
 Find:
 ```python
     if resp.status_code == 502:
-        pytest.skip("quantum-engine not reachable through proxy — skipping")
+        pytest.skip("quantum-engine not reachable through proxy - skipping")
     assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
 ```
 Replace with:
 ```python
     assert resp.status_code == 200, (
         f"Quantum health through proxy returned {resp.status_code}: {resp.text}\n"
-        f"quantum_api.py registers both /health and /quantum/health — "
+        f"quantum_api.py registers both /health and /quantum/health - "
         f"check that fastapi-proxy routes /quantum/* to quantum-engine:8004"
     )
 ```
@@ -691,12 +691,12 @@ Expected: 5 tests collected, no import errors.
 
 ```bash
 git add tests/test_integration_e2e.py
-git commit -m "fix: tighten E2E test assertions — remove always-passing count>=0 and 404 fallbacks"
+git commit -m "fix: tighten E2E test assertions - remove always-passing count>=0 and 404 fallbacks"
 ```
 
 ---
 
-## Task 4 — Final report
+## Task 4 - Final report
 
 **Files:**
 - Create: `report/final_report.md`
@@ -710,7 +710,7 @@ mkdir -p report
 Create `report/final_report.md` with the following content:
 
 ````markdown
-# Hybrid Quantum Trading (HQT) — Final Report
+# Hybrid Quantum Trading (HQT) - Final Report
 
 **CS39006 DBMS Lab | IIT Kharagpur | Spring 2026**
 
@@ -720,11 +720,11 @@ Create `report/final_report.md` with the following content:
 
 ## Abstract
 
-This report describes the design, implementation, and benchmarking of HQT, a five-module trading database system that detects real-time cyclic arbitrage across 20 cryptocurrency and fiat currency pairs. Three headline results demonstrate the system's performance: (1) a C++20 Limit Order Book engine sustaining **>100,000 order operations per second** at p99 < 10ms under Siege load; (2) TimescaleDB hypertable queries running in **~9ms** versus **~350ms** on an equivalent plain PostgreSQL table — a **37× speedup** — on 1 million rows; and (3) Bellman-Ford arbitrage detection completing in **<5ms** at 20 nodes, compared to **20,373ms** for a Qiskit Grover circuit on the same input using AerSimulator — a **5,848× overhead ratio** that quantifies the cost of classical state-vector simulation and motivates real quantum hardware evaluation.
+This report describes the design, implementation, and benchmarking of HQT, a five-module trading database system that detects real-time cyclic arbitrage across 20 cryptocurrency and fiat currency pairs. Three headline results demonstrate the system's performance: (1) a C++20 Limit Order Book engine sustaining **>100,000 order operations per second** at p99 < 10ms under Siege load; (2) TimescaleDB hypertable queries running in **~9ms** versus **~350ms** on an equivalent plain PostgreSQL table - a **37× speedup** - on 1 million rows; and (3) Bellman-Ford arbitrage detection completing in **<5ms** at 20 nodes, compared to **20,373ms** for a Qiskit Grover circuit on the same input using AerSimulator - a **5,848× overhead ratio** that quantifies the cost of classical state-vector simulation and motivates real quantum hardware evaluation.
 
 ---
 
-## Chapter 1 — Architecture and Technology Choices
+## Chapter 1 - Architecture and Technology Choices
 
 ### 1.1 System Overview
 
@@ -763,7 +763,7 @@ Kraken WebSocket (L2 + trades)
 
 ---
 
-## Chapter 2 — Module 1: LOB Engine
+## Chapter 2 - Module 1: LOB Engine
 
 ### 2.1 Data Structures
 
@@ -813,7 +813,7 @@ Prometheus metric `lob_order_latency_ms` histogram (captured during Siege) confi
 
 ---
 
-## Chapter 3 — Module 2: TimescaleDB Analytics
+## Chapter 3 - Module 2: TimescaleDB Analytics
 
 ### 3.1 Hypertable Design
 
@@ -872,7 +872,7 @@ GROUP BY 1, 2 ORDER BY 1;
 | 9 | 326.3 | 8.8 |
 | 10 | 335.9 | 8.6 |
 | **Avg** | **353.1** | **9.2** |
-| **Speedup** | — | **38×** |
+| **Speedup** | - | **38×** |
 
 The hypertable's chunk exclusion eliminates 23 out of 24 chunks for a 1-hour window on 1 million rows of daily data, explaining the order-of-magnitude speedup.
 
@@ -880,13 +880,13 @@ The hypertable's chunk exclusion eliminates 23 out of 24 chunks for a 1-hour win
 
 ---
 
-## Chapter 4 — Module 3: Apache AGE Graph Arbitrage
+## Chapter 4 - Module 3: Apache AGE Graph Arbitrage
 
 ### 4.1 Graph Schema
 
 The FX exchange graph is stored in Apache AGE as graph `fx_graph`:
 
-- **Nodes:** 20 `Asset` vertices — 10 crypto (BTC, ETH, LINK, SOL, ADA, XRP, DOGE, AVAX, UNI, DOT) + 10 fiat (USD, EUR, GBP, JPY, AUD, CAD, CHF, INR, SGD, HKD)
+- **Nodes:** 20 `Asset` vertices - 10 crypto (BTC, ETH, LINK, SOL, ADA, XRP, DOGE, AVAX, UNI, DOT) + 10 fiat (USD, EUR, GBP, JPY, AUD, CAD, CHF, INR, SGD, HKD)
 - **Edges:** ~380 directed `EXCHANGE` edges with properties `{bid, ask, spread, last_updated}`
 
 Edge weights are updated every 500ms by polling the LOB `/lob/depth/{symbol}` endpoint for crypto pairs and the Frankfurter/ECB API for fiat rates:
@@ -922,7 +922,7 @@ At 20 nodes with ~380 edges, a single Bellman-Ford run completes in **<5ms** inc
 
 ---
 
-## Chapter 5 — Module 4: Quantum Engine
+## Chapter 5 - Module 4: Quantum Engine
 
 ### 5.1 Grover's Algorithm on the Arbitrage Problem
 
@@ -940,7 +940,7 @@ The circuit is constructed as follows:
 
 ### 5.2 AerSimulator Overhead
 
-AerSimulator implements quantum circuits on a classical computer by maintaining the full 2ⁿ-element complex state vector. For n=16 qubits (N=32 graph nodes), this is 65,536 complex numbers updated at every gate application — O(2ⁿ) per gate, O(circuit_depth × 2ⁿ) total. The circuit depth grows rapidly with N because the oracle requires MCX gates of increasing control count.
+AerSimulator implements quantum circuits on a classical computer by maintaining the full 2ⁿ-element complex state vector. For n=16 qubits (N=32 graph nodes), this is 65,536 complex numbers updated at every gate application - O(2ⁿ) per gate, O(circuit_depth × 2ⁿ) total. The circuit depth grows rapidly with N because the oracle requires MCX gates of increasing control count.
 
 ### 5.3 Benchmark Results
 
@@ -961,7 +961,7 @@ Bellman-Ford time grows linearly (O(V·E)); Grover time grows exponentially due 
 
 ---
 
-## Chapter 6 — Module 5: Security and Observability
+## Chapter 6 - Module 5: Security and Observability
 
 ### 6.1 SQL Injection Firewall
 
@@ -1003,7 +1003,7 @@ Prometheus scrapes all six services every 15 seconds. Grafana provides a 35-pane
 
 ---
 
-## Chapter 7 — System Integration
+## Chapter 7 - System Integration
 
 ### 7.1 End-to-End Flow
 
@@ -1036,13 +1036,13 @@ The integration test suite (`tests/test_integration_e2e.py`) verifies cross-modu
 
 ## Conclusion
 
-HQT demonstrates that a polyglot database architecture — combining TimescaleDB hypertables, Apache AGE graph traversal, Redis atomic counters, and PostgreSQL as a common persistence layer — can support a high-throughput trading system with sub-millisecond latency at each layer.
+HQT demonstrates that a polyglot database architecture - combining TimescaleDB hypertables, Apache AGE graph traversal, Redis atomic counters, and PostgreSQL as a common persistence layer - can support a high-throughput trading system with sub-millisecond latency at each layer.
 
-The central research result is the classical-vs-quantum comparison. Bellman-Ford's deterministic O(V·E) complexity makes it the unambiguous production choice for arbitrage detection at the scale of a 20-node FX graph: it completes in <5ms and runs every 500ms continuously. The Grover benchmark quantifies the overhead of near-term quantum simulation: AerSimulator's state-vector model imposes a 5,848× slowdown at N=32 compared to Bellman-Ford. This is not a failure of the quantum algorithm — it is a measurement of the cost of classical state-vector simulation. On fault-tolerant quantum hardware with native MCX gate support, the same Grover circuit would achieve O(√N) oracle calls, providing a quadratic speedup over any classical search.
+The central research result is the classical-vs-quantum comparison. Bellman-Ford's deterministic O(V·E) complexity makes it the unambiguous production choice for arbitrage detection at the scale of a 20-node FX graph: it completes in <5ms and runs every 500ms continuously. The Grover benchmark quantifies the overhead of near-term quantum simulation: AerSimulator's state-vector model imposes a 5,848× slowdown at N=32 compared to Bellman-Ford. This is not a failure of the quantum algorithm - it is a measurement of the cost of classical state-vector simulation. On fault-tolerant quantum hardware with native MCX gate support, the same Grover circuit would achieve O(√N) oracle calls, providing a quadratic speedup over any classical search.
 
 ---
 
-## Appendix A — Full Quantum Benchmark Data
+## Appendix A - Full Quantum Benchmark Data
 
 | N | BF mean (ms) | BF p99 (ms) | Grover mean (ms) | Grover p99 (ms) | Qubits | Depth | Iters |
 |---|-------------|------------|-----------------|----------------|--------|-------|-------|
@@ -1055,7 +1055,7 @@ The central research result is the classical-vs-quantum comparison. Bellman-Ford
 | 28 | 1.164 | 1.173 | 12806.436 | 14109.318 | 16 | 24831 | 1 |
 | 32 | 3.481 | 3.749 | 20373.929 | 22706.563 | 16 | 42363 | 1 |
 
-## Appendix B — TimescaleDB Benchmark Data
+## Appendix B - TimescaleDB Benchmark Data
 
 | Trial | Plain (ms) | Hypertable (ms) | Speedup |
 |-------|-----------|-----------------|---------|
@@ -1071,7 +1071,7 @@ The central research result is the classical-vs-quantum comparison. Bellman-Ford
 | 10 | 335.867 | 8.639 | 39× |
 | **Avg** | **353.1** | **9.21** | **38×** |
 
-## Appendix C — Key Schema Definitions
+## Appendix C - Key Schema Definitions
 
 ```sql
 -- Time-series tick storage
@@ -1120,12 +1120,12 @@ Expected: ≥3,000 words.
 
 ```bash
 git add report/final_report.md
-git commit -m "docs: add final report — database engineering focus, all 5 modules"
+git commit -m "docs: add final report - database engineering focus, all 5 modules"
 ```
 
 ---
 
-## Task 5 — Demo script
+## Task 5 - Demo script
 
 **Files:**
 - Create: `report/demo_script.md`
@@ -1141,7 +1141,7 @@ git commit -m "docs: add final report — database engineering focus, all 5 modu
 
 ---
 
-## 0 — Pre-demo checklist (5 min before)
+## 0 - Pre-demo checklist (5 min before)
 
 ```bash
 docker compose ps                          # all services must show healthy/running
@@ -1153,7 +1153,7 @@ Open tabs: Grafana (:3000), this script.
 
 ---
 
-## 1 — Show all 5 modules are live (2 min)
+## 1 - Show all 5 modules are live (2 min)
 
 ```bash
 # Verify all services healthy
@@ -1163,37 +1163,37 @@ docker compose ps --format "table {{.Name}}\t{{.Status}}"
 Expected: 12 services, all `Up` or `healthy`.
 
 ```bash
-# Module 1 — LOB engine
+# Module 1 - LOB engine
 curl -s http://localhost:8001/lob/health | python3 -m json.tool
 ```
 Expected: `{"status": "ok", ...}`
 
 ```bash
-# Module 2 — TimescaleDB analytics
+# Module 2 - TimescaleDB analytics
 curl -s http://localhost:8002/analytics/health | python3 -m json.tool
 ```
 Expected: `{"status": "ok", "row_count": <N>}`
 
 ```bash
-# Module 3 — Graph service
+# Module 3 - Graph service
 curl -s http://localhost:8003/graph/health | python3 -m json.tool
 ```
 Expected: `{"status": "ok", "node_count": 20, ...}`
 
 ```bash
-# Module 4 — Quantum engine
+# Module 4 - Quantum engine
 curl -s http://localhost:8004/health | python3 -m json.tool
 ```
 Expected: `{"status": "ok"}`
 
 ```bash
-# Module 5 — Security proxy (routes all traffic)
+# Module 5 - Security proxy (routes all traffic)
 curl -s http://localhost:8000/health | python3 -m json.tool
 ```
 
 ---
 
-## 2 — Place LOB orders and show depth (3 min)
+## 2 - Place LOB orders and show depth (3 min)
 
 ```bash
 # Place a passive sell
@@ -1216,7 +1216,7 @@ curl -s http://localhost:8000/lob/depth/BTC%2FUSD | python3 -m json.tool
 
 ---
 
-## 3 — Show TimescaleDB ingestion (2 min)
+## 3 - Show TimescaleDB ingestion (2 min)
 
 ```bash
 # Count rows in raw_ticks (should be growing)
@@ -1234,7 +1234,7 @@ Switch to Grafana → scroll to candlestick panel.
 
 ---
 
-## 4 — Show live arbitrage signals (3 min)
+## 4 - Show live arbitrage signals (3 min)
 
 ```bash
 # Query arbitrage_signals directly
@@ -1244,11 +1244,11 @@ docker compose exec postgres psql -U hqt -d hqt -c \
 
 Switch to Grafana → scroll to **Graph Arbitrage Engine** section → show the timeline panel updating.
 
-**Talk track:** "Module 3 maintains a 20-node Apache AGE graph of FX exchange rates updated every 500ms from the LOB. Bellman-Ford runs on this graph every 500ms using a −log(rate) weight transformation — a negative cycle in the transformed graph means a profitable arbitrage cycle in the real market."
+**Talk track:** "Module 3 maintains a 20-node Apache AGE graph of FX exchange rates updated every 500ms from the LOB. Bellman-Ford runs on this graph every 500ms using a −log(rate) weight transformation - a negative cycle in the transformed graph means a profitable arbitrage cycle in the real market."
 
 ---
 
-## 5 — Security demo: SQL injection blocked (3 min)
+## 5 - Security demo: SQL injection blocked (3 min)
 
 ```bash
 # Attempt SQL injection in the order symbol field
@@ -1268,37 +1268,37 @@ docker compose exec postgres psql -U hqt -d hqt -c \
 
 Switch to Grafana → **Security & Observability** section → show the SQL Injections Blocked counter increment.
 
-**Talk track:** "Module 5 is a FastAPI reverse proxy. The SQL firewall uses sqlglot to parse the AST of any string that looks like SQL — it caught the DROP TABLE attempt before it reached any backend service."
+**Talk track:** "Module 5 is a FastAPI reverse proxy. The SQL firewall uses sqlglot to parse the AST of any string that looks like SQL - it caught the DROP TABLE attempt before it reached any backend service."
 
 ---
 
-## 6 — Quantum benchmark (3 min)
+## 6 - Quantum benchmark (3 min)
 
 Switch to Grafana → **Quantum Engine** section → show the benchmark table.
 
-**Talk track:** "Module 4 runs Grover's Algorithm on the same rate matrix that Bellman-Ford uses. At N=32 nodes: Bellman-Ford completes in 3.5ms, Grover takes 20,373ms on AerSimulator — 5,848× slower. This is because AerSimulator maintains a 65,536-element state vector classically. On real quantum hardware, the same circuit would execute in O(√N) oracle calls, providing a quadratic speedup. The benchmark quantifies exactly what near-term quantum advantage we'd need to unlock."
+**Talk track:** "Module 4 runs Grover's Algorithm on the same rate matrix that Bellman-Ford uses. At N=32 nodes: Bellman-Ford completes in 3.5ms, Grover takes 20,373ms on AerSimulator - 5,848× slower. This is because AerSimulator maintains a 65,536-element state vector classically. On real quantum hardware, the same circuit would execute in O(√N) oracle calls, providing a quadratic speedup. The benchmark quantifies exactly what near-term quantum advantage we'd need to unlock."
 
 Open `module4_quantum/bench_out/benchmark_quantum.png` alongside the live Grafana table.
 
 ---
 
-## 7 — Hero row summary (2 min)
+## 7 - Hero row summary (2 min)
 
 Scroll Grafana back to the top → **System Overview** row.
 
 Point to each tile:
-1. **LOB Throughput** — live orders/sec from Prometheus
-2. **TimescaleDB Speedup** — 37× from benchmark data
-3. **Arb Signals (24h)** — CLASSICAL signals detected today
-4. **Grover Overhead @N=32** — 5,848× from benchmark data
-5. **SQL Injections Blocked** — 1 (the one we just fired)
-6. **Services Up** — 5/5 modules healthy
+1. **LOB Throughput** - live orders/sec from Prometheus
+2. **TimescaleDB Speedup** - 37× from benchmark data
+3. **Arb Signals (24h)** - CLASSICAL signals detected today
+4. **Grover Overhead @N=32** - 5,848× from benchmark data
+5. **SQL Injections Blocked** - 1 (the one we just fired)
+6. **Services Up** - 5/5 modules healthy
 
-**Talk track:** "All five modules — LOB, TimescaleDB, AGE graph, quantum engine, security proxy — are running and observable from a single Grafana dashboard."
+**Talk track:** "All five modules - LOB, TimescaleDB, AGE graph, quantum engine, security proxy - are running and observable from a single Grafana dashboard."
 
 ---
 
-## Appendix — Useful commands during Q&A
+## Appendix - Useful commands during Q&A
 
 ```bash
 # Show graph nodes
@@ -1332,7 +1332,7 @@ git commit -m "docs: add 20-minute professor demo script with exact curl command
 
 - [x] **Spec coverage:** Hero row ✓, Quantum row ✓, Security row ✓, `benchmark_quantum_results` table ✓, seed script ✓, E2E fixes (3) ✓, report ✓, demo script ✓
 - [x] **Placeholder scan:** No TBDs. All code blocks contain actual content. Report contains full prose.
-- [x] **Type consistency:** `patch_grafana.py` — `quantum_row()` and `security_row()` both use `base_y` parameter computed from `max_y`. Seed script column mapping matches DDL columns.
+- [x] **Type consistency:** `patch_grafana.py` - `quantum_row()` and `security_row()` both use `base_y` parameter computed from `max_y`. Seed script column mapping matches DDL columns.
 - [x] **Datasource UIDs:** `Prometheus` and `TimescaleDB` confirmed from `datasources.yml`.
 - [x] **Panel IDs:** Hero 99,301–306; Quantum 400–406; Security 500–505. No conflicts with existing 1–210 range.
-- [x] **E2E fix 3:** Confirmed `quantum_api.py` registers both `/health` and `/quantum/health` — test URL is valid.
+- [x] **E2E fix 3:** Confirmed `quantum_api.py` registers both `/health` and `/quantum/health` - test URL is valid.

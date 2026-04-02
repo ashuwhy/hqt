@@ -313,7 +313,7 @@ int main() {
       },
       {Post});
 
-  // ── DELETE /lob/order/{order_id} — cancel order by ID ────────────────────
+  // ── DELETE /lob/order/{order_id} - cancel order by ID ────────────────────
   app().registerHandler(
       "/lob/order/{order_id}",
       [](const HttpRequestPtr &req,
@@ -375,7 +375,7 @@ int main() {
       },
       {Delete});
 
-  // ── PATCH /lob/order/{order_id} — modify order (cancel + re-insert) ───────
+  // ── PATCH /lob/order/{order_id} - modify order (cancel + re-insert) ───────
   app().registerHandler(
       "/lob/order/{order_id}",
       [](const HttpRequestPtr &req,

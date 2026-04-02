@@ -66,7 +66,7 @@ def is_profitable(cycle: tuple[str, ...], rates: dict[tuple[str, str], float]) -
         cycle[0]→cycle[1], cycle[1]→cycle[2], …, cycle[-1]→cycle[0]
 
     A product > 1.0 means converting 1 unit of cycle[0] and going around the
-    cycle yields more than 1 unit back — i.e. a profitable arbitrage.
+    cycle yields more than 1 unit back - i.e. a profitable arbitrage.
 
     Parameters
     ----------
@@ -130,15 +130,15 @@ def run_grover(
     -------
     dict
         Keys:
-            path          — list[str] best detected cycle (closed), or None
-            profit_pct    — float profit percentage
-            circuit_depth — int Qiskit circuit depth
-            n_qubits      — int qubits used
-            n_iter        — int Grover iterations applied
-            n_cycles      — int total cycles enumerated
-            n_profitable  — int number of profitable cycles found
-            shots         — int shots used
-            counts_top5   — dict top-5 measurement outcomes (state → count)
+            path          - list[str] best detected cycle (closed), or None
+            profit_pct    - float profit percentage
+            circuit_depth - int Qiskit circuit depth
+            n_qubits      - int qubits used
+            n_iter        - int Grover iterations applied
+            n_cycles      - int total cycles enumerated
+            n_profitable  - int number of profitable cycles found
+            shots         - int shots used
+            counts_top5   - dict top-5 measurement outcomes (state → count)
     """
     base_result: dict = {
         "path": None,
@@ -225,7 +225,7 @@ def run_grover(
     circuit_depth = qc.depth()
 
     # ── Step 8: run on AerSimulator ───────────────────────────────────────────
-    from qiskit_aer import AerSimulator  # lazy import — heavy C++ extension
+    from qiskit_aer import AerSimulator  # lazy import - heavy C++ extension
     simulator = AerSimulator()
     job = simulator.run(qc, shots=shots)
     result = job.result()

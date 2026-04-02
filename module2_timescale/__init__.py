@@ -1,1 +1,1 @@
-# Module 2 — TimescaleDB Analytics Engine
+# Module 2 - TimescaleDB Analytics Engine

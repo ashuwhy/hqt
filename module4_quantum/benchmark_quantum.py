@@ -8,14 +8,14 @@ Narrative
 Bellman-Ford is O(N·E) and completes in < 5ms for all tested graph sizes.
 Grover's Algorithm has a theoretical O(√N) query complexity advantage over
 classical search, but this advantage applies only to oracle queries on real
-quantum hardware — AerSimulator computes the full state vector classically,
+quantum hardware - AerSimulator computes the full state vector classically,
 resulting in exponential time overhead as N grows. The benchmark demonstrates
 the theoretical complexity, not a practical speedup.
 
 Output
 ------
-  bench_out/benchmark_quantum.csv  — per-N timing summary
-  bench_out/benchmark_quantum.png  — dual log-scale line chart
+  bench_out/benchmark_quantum.csv  - per-N timing summary
+  bench_out/benchmark_quantum.png  - dual log-scale line chart
 
 CLI
 ---
@@ -37,7 +37,7 @@ from pathlib import Path
 from typing import Any
 
 import matplotlib
-matplotlib.use("Agg")  # headless backend — must be set before pyplot import
+matplotlib.use("Agg")  # headless backend - must be set before pyplot import
 import matplotlib.pyplot as plt
 import numpy as np
 import psycopg
@@ -158,10 +158,10 @@ def _plot_benchmark(rows: list[dict[str, Any]], output_path: Path) -> None:
 
     ax.set_yscale("log")
     ax.set_xlabel("Graph Size (N nodes)", fontsize=12)
-    ax.set_ylabel("Wall-clock time (ms) — log scale", fontsize=12)
+    ax.set_ylabel("Wall-clock time (ms) - log scale", fontsize=12)
     ax.set_title(
         "Bellman-Ford vs Grover's Algorithm (AerSimulator)\n"
-        "HQT Module 4 — Quantum Arbitrage Detection Benchmark",
+        "HQT Module 4 - Quantum Arbitrage Detection Benchmark",
         fontsize=13,
     )
     ax.legend(fontsize=10)

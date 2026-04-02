@@ -3,7 +3,7 @@ tests.test_bellman_ford
 ~~~~~~~~~~~~~~~~~~~~~~~
 Pure-Python unit tests for the Bellman-Ford arbitrage detector.
 
-No database or Docker required — tests run against synthetic rate
+No database or Docker required - tests run against synthetic rate
 matrices constructed in-memory.
 
 Run with:
