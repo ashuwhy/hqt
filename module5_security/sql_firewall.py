@@ -8,12 +8,21 @@ Two-layer detection:
 from __future__ import annotations
 
 import logging
+import os
 
+import asyncpg
 import sqlglot
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
 logger = logging.getLogger("sql_firewall")
+
+_PG_DSN = (
+    f"postgresql://{os.getenv('POSTGRES_USER','hqt')}"
+    f":{os.getenv('POSTGRES_PASSWORD','hqt_secret')}"
+    f"@{os.getenv('POSTGRES_HOST','postgres')}"
+    f":5432/{os.getenv('POSTGRES_DB','hqt')}"
+)
 
 # Patterns that are always forbidden in request payloads
 BANNED_PATTERNS = [
@@ -39,12 +48,22 @@ BANNED_STATEMENT_TYPES = {"Drop", "TruncateTable", "Create", "AlterTable", "Comm
 
 
 async def _log_security_event(request: Request, event_type: str, payload_snippet: str) -> None:
-    """Log a security event. In production this would also write to security_events table."""
+    """Log a security event to console and security_events table."""
     client_ip = request.client.host if request.client else "unknown"
     logger.warning(
         "SECURITY EVENT: type=%s ip=%s path=%s payload=%s",
         event_type, client_ip, request.url.path, payload_snippet[:200],
     )
+    try:
+        conn = await asyncpg.connect(_PG_DSN)
+        await conn.execute(
+            """INSERT INTO security_events (client_ip, event_type, raw_payload, blocked, endpoint)
+               VALUES ($1, $2, $3, TRUE, $4)""",
+            client_ip, "SQL_INJECTION", payload_snippet[:500], request.url.path,
+        )
+        await conn.close()
+    except Exception as e:
+        logger.error("Failed to log security event to DB: %s", e)
 
 
 async def sql_firewall_middleware(request: Request, call_next):
