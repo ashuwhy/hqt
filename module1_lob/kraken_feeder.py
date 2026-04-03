@@ -9,6 +9,7 @@ and feeds those bids and asks as synthetic limit orders into our internal C++ LO
 import asyncio
 import json
 import logging
+import os
 import time
 import httpx
 import websockets
@@ -17,7 +18,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger("kraken_feeder")
 
 KRAKEN_WS_URL = "wss://ws.kraken.com/v2"
-LOB_API_URL = "http://localhost:8001/lob/order"
+LOB_API_URL = os.getenv("LOB_ENGINE_URL", "http://localhost:8001") + "/lob/order"
 
 # Kraken pair names → our LOB symbol format
 SYMBOLS = {
