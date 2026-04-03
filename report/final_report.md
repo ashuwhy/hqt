@@ -484,6 +484,10 @@ The higher latency compared to direct LOB access (1,194ms vs 62ms) reflects the 
 
 The 49-panel Grafana dashboard at `http://localhost:3000` provides a unified view across all five modules. Panels are provisioned via JSON (version-controlled in `module5_security/grafana_provisioning/`) and load automatically on container startup.
 
+![Grafana Hero Row — System Overview](grafana_hero.png)
+
+*Figure 3: Hero row showing live LOB throughput, 38x TimescaleDB speedup, arbitrage signal count, 5848x Grover overhead, SQL injections blocked, and 6 services online.*
+
 **Hero row (6 stat tiles, auto-refresh 5s):**
 - LOB Throughput — live `rate(lob_orders_total[1m])` from Prometheus
 - TimescaleDB Speedup — `38×` from `benchmark_quantum_results` table
@@ -496,9 +500,21 @@ The 49-panel Grafana dashboard at `http://localhost:3000` provides a unified vie
 
 **Graph Arbitrage Engine row:** Bellman-Ford signal timeline (Grafana time series, 500ms cadence), profit distribution histogram, CLASSICAL vs QUANTUM comparison table.
 
+![Grafana Arbitrage Engine Row — Live Bellman-Ford Signals](grafana_arbitrage.png)
+
+*Figure 4: Live arbitrage signal timeline. Each point is a Bellman-Ford run detecting a profitable negative cycle. Profit values 0.001--0.02% are consistent with real-world HFT margins.*
+
 **Quantum Engine row:** Full N=4→32 benchmark table with colour overrides (green = BF, purple = Grover, orange = ratio), circuit depth stat panel, qubit count panel, AerSimulator overhead text annotation.
 
+![Grafana Quantum Engine Row — BF vs Grover Benchmark Table](grafana_quantum.png)
+
+*Figure 5: Quantum benchmark table. Green columns = Bellman-Ford (ms), purple = Grover on AerSimulator (ms), orange = overhead ratio. At N=32 the ratio is 5,848x.*
+
 **Security & Observability row:** SQL injection blocked counter, rate-limit counter, requests/second time series, p99 latency time series, recent security events log table.
+
+![Grafana Security Row — SQL Injection Blocked and Observability](grafana_security.png)
+
+*Figure 6: Security & Observability row. SQL Injections Blocked counter increments on each detected attack. The security events table shows timestamp, client IP, and blocked status.*
 
 ---
 
