@@ -1,4 +1,4 @@
-http://127.0.0.1:8001/lob/order POST {"symbol":"BTCUSD","side":"B","price":50001.0,"quantity":1.0,"ordertype":"LIMIT"}
-http://127.0.0.1:8001/lob/order POST {"symbol":"BTCUSD","side":"A","price":50000.0,"quantity":1.0,"ordertype":"LIMIT"}
-http://127.0.0.1:8001/lob/order POST {"symbol":"ETHUSD","side":"B","price":3001.0,"quantity":10.0,"ordertype":"LIMIT"}
-http://127.0.0.1:8001/lob/order POST {"symbol":"ETHUSD","side":"A","price":3000.0,"quantity":10.0,"ordertype":"LIMIT"}
+http://127.0.0.1:8001/lob/order POST {"symbol":"BTCUSD","side":"B","price":66740.0,"quantity":0.01,"ordertype":"LIMIT"}
+http://127.0.0.1:8001/lob/order POST {"symbol":"BTCUSD","side":"A","price":66738.0,"quantity":0.01,"ordertype":"LIMIT"}
+http://127.0.0.1:8001/lob/order POST {"symbol":"ETHUSD","side":"B","price":2060.0,"quantity":0.1,"ordertype":"LIMIT"}
+http://127.0.0.1:8001/lob/order POST {"symbol":"ETHUSD","side":"A","price":2059.0,"quantity":0.1,"ordertype":"LIMIT"}
