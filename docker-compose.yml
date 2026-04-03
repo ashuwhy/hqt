@@ -149,6 +149,18 @@ services:
       timeout: 5s
       retries: 5
 
+  kraken-feeder:
+    image: hqt-data-ingestor:latest
+    container_name: hqt-kraken-feeder
+    hostname: kraken-feeder
+    env_file:
+      - .env
+    depends_on:
+      lob-engine:
+        condition: service_healthy
+    command: ["python", "-m", "module1_lob.kraken_feeder"]
+    restart: unless-stopped
+
   data-ingestor:
     build:
       context: .
