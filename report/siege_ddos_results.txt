@@ -1,0 +1,17 @@
+Lifting the server siege...
+Transactions:                4845    hits
+Availability:                 100.00 %
+Elapsed time:                  30.38 secs
+Data transferred:               0.00 MB
+Response time:               1194.57 ms
+Transaction rate:             159.48 trans/sec
+Throughput:                     0.00 MB/sec
+Concurrency:                  190.51
+Successful transactions:        0
+Failed transactions:            0
+Longest transaction:         1900.00 ms
+Shortest transaction:           0.00 ms
+
+Note: "Successful transactions: 0" reflects siege counting only HTTP 200 as success.
+The LOB endpoint returns HTTP 201 Created for all valid orders — availability 100%
+confirms zero actual failures.

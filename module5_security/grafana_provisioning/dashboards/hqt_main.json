@@ -25,7 +25,7 @@
     {
       "id": 99,
       "type": "row",
-      "title": "\u26a1 System Overview",
+      "title": "System Overview",
       "collapsed": false,
       "gridPos": {
         "x": 0,
@@ -109,14 +109,14 @@
             "type": "postgres",
             "uid": "TimescaleDB"
           },
-          "rawSql": "SELECT ROUND(AVG(grover_mean_ms) / NULLIF(AVG(bf_mean_ms),0)) || '\u00d7' FROM benchmark_quantum_results WHERE benchmark_type='timescale'",
+          "rawSql": "SELECT ROUND(AVG(grover_mean_ms) / NULLIF(AVG(bf_mean_ms),0))::float AS value FROM benchmark_quantum_results WHERE benchmark_type='timescale'",
           "format": "table",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "string",
+          "unit": "none",
           "decimals": 0,
           "color": {
             "fixedColor": "#4ade80",
@@ -131,7 +131,8 @@
               }
             ]
           },
-          "mappings": []
+          "mappings": [],
+          "displayName": "\u00d7"
         },
         "overrides": []
       },
@@ -147,7 +148,8 @@
         "textMode": "value_and_name",
         "colorMode": "background",
         "graphMode": "none",
-        "justifyMode": "center"
+        "justifyMode": "center",
+        "text": {}
       },
       "gridPos": {
         "x": 4,
@@ -231,14 +233,14 @@
             "type": "postgres",
             "uid": "TimescaleDB"
           },
-          "rawSql": "SELECT ROUND(grover_mean_ms / bf_mean_ms) || '\u00d7' FROM benchmark_quantum_results WHERE benchmark_type='quantum' AND n_nodes=32",
+          "rawSql": "SELECT ROUND(grover_mean_ms / bf_mean_ms)::float AS value FROM benchmark_quantum_results WHERE benchmark_type='quantum' AND n_nodes=32",
           "format": "table",
           "refId": "A"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "string",
+          "unit": "none",
           "decimals": 0,
           "color": {
             "fixedColor": "#a78bfa",
@@ -253,7 +255,8 @@
               }
             ]
           },
-          "mappings": []
+          "mappings": [],
+          "displayName": "\u00d7"
         },
         "overrides": []
       },
@@ -269,7 +272,8 @@
         "textMode": "value_and_name",
         "colorMode": "background",
         "graphMode": "none",
-        "justifyMode": "center"
+        "justifyMode": "center",
+        "text": {}
       },
       "gridPos": {
         "x": 12,
@@ -2479,7 +2483,7 @@
     {
       "id": 400,
       "type": "row",
-      "title": "\ud83d\udd2c Quantum Engine \u2014 Classical vs Quantum Complexity",
+      "title": "Quantum Engine \u2014 Classical vs Quantum Complexity",
       "collapsed": false,
       "gridPos": {
         "x": 0,
@@ -2839,7 +2843,7 @@
     {
       "id": 500,
       "type": "row",
-      "title": "\ud83d\udee1\ufe0f Security & Observability",
+      "title": "\ufe0f Security & Observability",
       "collapsed": false,
       "gridPos": {
         "x": 0,
