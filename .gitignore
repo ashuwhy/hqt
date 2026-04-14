@@ -128,3 +128,7 @@ report/*.pdf
 /temp/
 quantum_scaling.png
 benchmark_quantum.csv
+
+# AI tooling (local only)
+CLAUDE.md
+docs/superpowers/
