@@ -50,6 +50,7 @@
           },
           "expr": "sum(rate(lob_orders_total[1m]))",
           "instant": true,
+          "legendFormat": "req/s",
           "refId": "A"
         }
       ],

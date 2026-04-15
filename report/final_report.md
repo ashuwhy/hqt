@@ -1,4 +1,4 @@
-# Hybrid Quantum Trading (HQT) — Final Project Report
+# Hybrid Quantum Trading (HQT) - Final Project Report
 
 **CS39006 Database Management Systems Lab | IIT Kharagpur | Spring 2026**
 
@@ -6,7 +6,7 @@
 
 ## 1. Title and Team Members
 
-**Project Title:** HQT — Hybrid Quantum Trading: A Polyglot Database System for Real-Time Arbitrage Detection
+**Project Title:** HQT - Hybrid Quantum Trading: A Polyglot Database System for Real-Time Arbitrage Detection
 
 | Name | Roll Number | Module |
 |------|-------------|--------|
@@ -27,7 +27,7 @@ HQT is a five-module trading database system that detects real-time cyclic arbit
 Concretely, HQT pursues four measurable goals:
 
 1. **Throughput:** Sustain high-volume order operations at sub-100ms average latency using a C++20 Limit Order Book engine backed by Kafka, benchmarked under 200 concurrent clients.
-2. **Time-series analytics:** Demonstrate that TimescaleDB hypertables are measurably faster than plain PostgreSQL for financial time-series queries — targeting a 10× or greater speedup on 1 million rows.
+2. **Time-series analytics:** Demonstrate that TimescaleDB hypertables are measurably faster than plain PostgreSQL for financial time-series queries - targeting a 10× or greater speedup on 1 million rows.
 3. **Arbitrage detection:** Run Bellman-Ford on a live Apache AGE graph of FX exchange rates every 500ms and persist all detected cycles to a queryable `arbitrage_signals` table.
 4. **Quantum comparison:** Quantify the wall-clock gap between classical Bellman-Ford and Qiskit Grover's Algorithm on the same input, producing a scaling benchmark that demonstrates what real quantum hardware would change.
 
@@ -66,7 +66,7 @@ Kraken WebSocket (L2 order book + executed trades)
                     +--> Prometheus scrape + Grafana dashboard
 ```
 
-All 12 services (including Zookeeper, Kafka, PostgreSQL 16, Redis, Prometheus, Grafana, and exporters) are orchestrated via Docker Compose. Infrastructure services start before application services, with health-check conditions — `service_healthy` in compose — guaranteeing application-level readiness, not just TCP port availability.
+All 12 services (including Zookeeper, Kafka, PostgreSQL 16, Redis, Prometheus, Grafana, and exporters) are orchestrated via Docker Compose. Infrastructure services start before application services, with health-check conditions - `service_healthy` in compose - guaranteeing application-level readiness, not just TCP port availability.
 
 ### 3.2 Technology Selection Rationale
 
@@ -82,11 +82,11 @@ The key engineering decision in HQT is that no single database technology is use
 
 The choice of Apache AGE over a standalone graph database (Neo4j, ArangoDB) is particularly significant: because AGE is a PostgreSQL extension, Bellman-Ford results can be written to `arbitrage_signals` inside a single database transaction, eliminating the consistency problem of a two-phase commit across two databases.
 
-### 3.3 Module 1 — C++ Limit Order Book Engine
+### 3.3 Module 1 - C++ Limit Order Book Engine
 
 **Why C++ over Python:** Python's Global Interpreter Lock (GIL) prevents true thread-level parallelism. A Python order matching engine running on 8 cores effectively runs on 1. C++20 with `std::thread` and lock-free ring buffers achieves full multi-core utilisation with no GIL constraint.
 
-**Data structure:** The order book uses `std::map<double, std::deque<Order>>` — a Red-Black Tree keyed on price, where each price level holds a FIFO deque for time-priority matching. Red-Black Tree guarantees O(log P) insertion and O(1) best-price access (begin/rbegin for bid/ask). This is the standard production data structure for limit order books.
+**Data structure:** The order book uses `std::map<double, std::deque<Order>>` - a Red-Black Tree keyed on price, where each price level holds a FIFO deque for time-priority matching. Red-Black Tree guarantees O(log P) insertion and O(1) best-price access (begin/rbegin for bid/ask). This is the standard production data structure for limit order books.
 
 **Three-thread pipeline:**
 
@@ -105,14 +105,14 @@ Thread C (Kafka producer)
 The lock-free ring buffer between threads A/B and B/C eliminates mutex contention on the hot path. Drogon (C++ HTTP framework) handles the REST API on a separate thread pool without interfering with the matching pipeline.
 
 **Prometheus metrics** exposed at `/lob/metrics`:
-- `lob_orders_total` — counter, labelled by symbol and side
-- `lob_trades_total` — counter of matched trades
-- `lob_order_latency_ms` — histogram of end-to-end order processing time
-- `lob_active_orders` — gauge of current resting orders in the book
+- `lob_orders_total` - counter, labelled by symbol and side
+- `lob_trades_total` - counter of matched trades
+- `lob_order_latency_ms` - histogram of end-to-end order processing time
+- `lob_active_orders` - gauge of current resting orders in the book
 
 **Kraken feeder:** A Python bridge (`kraken_feeder.py`) subscribes to Kraken's public L2 WebSocket channel for 10 crypto pairs and converts each bid/ask level update into a synthetic LIMIT order posted to the LOB engine. This populates the order book with real market prices rather than synthetic data.
 
-### 3.4 Module 2 — TimescaleDB Time-Series Analytics
+### 3.4 Module 2 - TimescaleDB Time-Series Analytics
 
 **Why TimescaleDB over plain PostgreSQL:** Financial tick data has two dominant access patterns: (1) high-throughput appends from the Kafka consumer, and (2) time-range OHLCV queries from the analytics API and Grafana. Plain PostgreSQL stores all rows in a single heap, so every range query scans the full table. TimescaleDB partitions the table into fixed-interval chunks and maintains a metadata index of chunk boundaries, enabling the query planner to skip (exclude) all chunks outside the query's time range.
 
@@ -124,7 +124,7 @@ SELECT create_hypertable('raw_ticks', 'ts',
     number_partitions     => 4);
 ```
 
-Space partitioning on `symbol` distributes the 10 crypto pairs across 4 hash partitions, reducing per-chunk row density. A 1-hour query on 30 days of data touches 1–2 chunks out of 120 daily × 4 symbol partitions — this is the source of the 38× speedup.
+Space partitioning on `symbol` distributes the 10 crypto pairs across 4 hash partitions, reducing per-chunk row density. A 1-hour query on 30 days of data touches 1–2 chunks out of 120 daily × 4 symbol partitions - this is the source of the 38× speedup.
 
 **Compression policy:** Chunks older than 7 days are compressed using TimescaleDB's native columnar codec (dictionary + delta-delta encoding for timestamps). Compressed chunks use 90–95% less storage and remain queryable through a transparent decompression layer.
 
@@ -149,9 +149,9 @@ The `FIRST()` and `LAST()` aggregate functions are TimescaleDB extensions that r
 
 **SQL indicator functions:** `fn_vwap`, `fn_sma20`, `fn_bollinger`, `fn_rsi14` query the continuous aggregates and return indicator values for the last N buckets. All execute in under 5ms because they touch only the materialised data.
 
-**Kafka ingestor:** The analytics service runs a background Kafka consumer that batches 1,000 records or waits 100ms (whichever comes first), then issues a `psycopg3` binary `COPY` command to bulk-insert into `raw_ticks`. Binary COPY is the fastest PostgreSQL bulk-insert path — approximately 3–5× faster than individual INSERT statements.
+**Kafka ingestor:** The analytics service runs a background Kafka consumer that batches 1,000 records or waits 100ms (whichever comes first), then issues a `psycopg3` binary `COPY` command to bulk-insert into `raw_ticks`. Binary COPY is the fastest PostgreSQL bulk-insert path - approximately 3–5× faster than individual INSERT statements.
 
-### 3.5 Module 3 — Apache AGE Graph + Bellman-Ford Arbitrage
+### 3.5 Module 3 - Apache AGE Graph + Bellman-Ford Arbitrage
 
 **Why Apache AGE over Neo4j:** Neo4j is a standalone database requiring a separate process, separate connection pool, and two-phase commits for any operation that must also write to PostgreSQL. Apache AGE is a PostgreSQL extension that adds a Cypher query parser and property graph storage to PostgreSQL. Graph traversals run inside normal PostgreSQL transactions, so Bellman-Ford results are written to `arbitrage_signals` atomically with the graph state they were computed from.
 
@@ -188,7 +188,7 @@ Bellman-Ford's Nth relaxation pass (beyond N-1 passes) detects all vertices on n
 
 **Live results:** With real Kraken prices, detected arbitrage signals have profits in the range 0.001%–0.02%, consistent with real-world HFT arbitrage margins. Representative detected cycle: `LINK → USD → BTC → LINK`, profit 0.0012%.
 
-### 3.6 Module 4 — Quantum Engine (Research Benchmark)
+### 3.6 Module 4 - Quantum Engine (Research Benchmark)
 
 **Purpose:** Module 4 implements Grover's Algorithm as a research benchmark running alongside Bellman-Ford. Both algorithms operate on the same N-node rate matrix, write results to `arbitrage_signals` (with `method='QUANTUM'`), and are compared in the same Grafana panel.
 
@@ -203,13 +203,13 @@ Bellman-Ford's Nth relaxation pass (beyond N-1 passes) detects all vertices on n
 
 **Why AerSimulator is exponentially slower than classical Bellman-Ford:**
 
-AerSimulator is a statevector simulator — it maintains the full `2ⁿ`-element complex amplitude vector in classical RAM. Each gate application involves matrix-vector multiplication over the full `2ⁿ` state. For n=16 qubits (N=32 nodes), the state vector has `2¹⁶ = 65,536` complex entries. Every Grover iteration applies dozens of gate operations, each O(2ⁿ).
+AerSimulator is a statevector simulator - it maintains the full `2ⁿ`-element complex amplitude vector in classical RAM. Each gate application involves matrix-vector multiplication over the full `2ⁿ` state. For n=16 qubits (N=32 nodes), the state vector has `2¹⁶ = 65,536` complex entries. Every Grover iteration applies dozens of gate operations, each O(2ⁿ).
 
 On real quantum hardware with native gate support, Grover requires only O(√|cycles|) oracle calls with no state-vector simulation overhead. For N=32 nodes with 29,760 3-cycles, real Grover would use approximately 173 oracle calls versus Bellman-Ford's single pass.
 
 **Shared schema:** Both modules write to the same `arbitrage_signals` table with a `method` column distinguishing `'CLASSICAL'` and `'QUANTUM'` results. Grafana visualises both streams colour-coded in the same panel, making the comparison immediately visible.
 
-### 3.7 Module 5 — Security Proxy & Observability
+### 3.7 Module 5 - Security Proxy & Observability
 
 **Architecture:** Module 5 is a FastAPI application running on port 8000. It is the single entry point for all external traffic. Internally it routes:
 - `/lob/*` → LOB engine (:8001)
@@ -217,11 +217,11 @@ On real quantum hardware with native gate support, Grover requires only O(√|cy
 - `/graph/*` → Graph service (:8003)
 - `/quantum/*` → Quantum engine (:8004)
 
-**SQL injection firewall — two layers:**
+**SQL injection firewall - two layers:**
 
-*Layer 1 — Pattern scan:* 15 regex patterns matching `UNION SELECT`, `DROP TABLE`, `OR 1=1`, `--`, comment sequences, semicolons, and common injection keywords scan every string field in incoming JSON bodies.
+*Layer 1 - Pattern scan:* 15 regex patterns matching `UNION SELECT`, `DROP TABLE`, `OR 1=1`, `--`, comment sequences, semicolons, and common injection keywords scan every string field in incoming JSON bodies.
 
-*Layer 2 — AST parse:* Any string that passes Layer 1 but contains SQL-like syntax is passed to `sqlglot.parse()`. The resulting AST is walked for DDL node types: `Drop`, `Truncate`, `Create`, `AlterTable`, `Insert`, `Update`. Detection at either layer returns HTTP 403 and logs to `security_events`.
+*Layer 2 - AST parse:* Any string that passes Layer 1 but contains SQL-like syntax is passed to `sqlglot.parse()`. The resulting AST is walked for DDL node types: `Drop`, `Truncate`, `Create`, `AlterTable`, `Insert`, `Update`. Detection at either layer returns HTTP 403 and logs to `security_events`.
 
 This dual-layer approach avoids false positives (common English words like "select" in order descriptions are not flagged by pattern scan alone) while catching obfuscated attacks (encoded or split payloads that bypass simple regex).
 
@@ -357,7 +357,7 @@ CREATE INDEX ON security_events (event_type, ts DESC);
 
 ## 4. Results and Screenshots
 
-### 4.1 LOB Engine — Throughput Benchmark
+### 4.1 LOB Engine - Throughput Benchmark
 
 Siege load test: 200 concurrent clients, 30 seconds, HTTP POST to `/lob/order` with live market prices.
 
@@ -379,9 +379,9 @@ siege --content-type "application/json" -c 200 -t 30S -f module1_lob/urls.txt
 
 All 99,537 requests returned HTTP 201 Created. Zero crashes, zero timeouts. The average 62ms response time includes Docker Desktop hypervisor overhead on macOS; native bare-metal measurements would be significantly lower.
 
-When testing with crossing prices (orders that trigger actual matching and Kafka publishing), throughput is 1,158 trans/sec at 159ms average — the bottleneck in this mode is the Kafka producer round-trip per executed trade, not the C++ matching engine itself.
+When testing with crossing prices (orders that trigger actual matching and Kafka publishing), throughput is 1,158 trans/sec at 159ms average - the bottleneck in this mode is the Kafka producer round-trip per executed trade, not the C++ matching engine itself.
 
-### 4.2 TimescaleDB — Hypertable vs Plain PostgreSQL
+### 4.2 TimescaleDB - Hypertable vs Plain PostgreSQL
 
 1,000,000 rows of Geometric Brownian Motion tick data loaded into both a plain PostgreSQL table and a TimescaleDB hypertable. Same 1-hour OHLCV range query run 10 times on each:
 
@@ -398,11 +398,11 @@ When testing with crossing prices (orders that trigger actual matching and Kafka
 | 9 | 326.3 | 8.8 |
 | 10 | 335.9 | 8.6 |
 | **Mean** | **353.1 ms** | **9.2 ms** |
-| **Speedup** | — | **38×** |
+| **Speedup** | - | **38×** |
 
 **Explanation of the 38× speedup:** The 1-hour query specifies a time range. With 30 days of data chunked by day, TimescaleDB's chunk exclusion eliminates 23 of 24 daily chunks from the scan. The query planner reads only the 1–2 chunks covering the target hour. Plain PostgreSQL performs a full sequential scan of all 1,000,000 rows regardless of the time filter.
 
-![TimescaleDB Benchmark — Plain PostgreSQL vs Hypertable](../module2_timescale/bench_out/benchmark_timescale.png)
+![TimescaleDB Benchmark - Plain PostgreSQL vs Hypertable](../module2_timescale/bench_out/benchmark_timescale.png)
 
 *Figure 1: Query time (ms) across 10 trials. Blue = plain PostgreSQL, Orange = TimescaleDB hypertable. 38× mean speedup.*
 
@@ -448,11 +448,11 @@ Both algorithms run on the same rate matrix at increasing graph sizes N=4 to N=3
 
 On real quantum hardware, the same Grover circuit executes in O(√|cycles|) oracle invocations with constant-time gate application (native hardware). For N=32 nodes with ~29,760 3-cycles, this means approximately 173 Grover iterations versus Bellman-Ford's single O(V·E) = O(20 × 380) = 7,600 relaxation operations. Real Grover would be competitive with Bellman-Ford; simulated Grover is 5,848× slower.
 
-![Quantum Benchmark — Bellman-Ford vs Grover Overhead](../module4_quantum/bench_out/benchmark_quantum.png)
+![Quantum Benchmark - Bellman-Ford vs Grover Overhead](../module4_quantum/bench_out/benchmark_quantum.png)
 
 *Figure 2: Wall-clock time (ms, log scale) vs N nodes. Green = Bellman-Ford O(V·E) classical, Purple = Grover on AerSimulator O(2ⁿ). The curves diverge exponentially, illustrating the simulation overhead.*
 
-### 4.5 Security — DDoS Resistance and SQL Injection Blocking
+### 4.5 Security - DDoS Resistance and SQL Injection Blocking
 
 **SQL injection blocking:** All OWASP Top-10 SQL injection payloads return HTTP 403 and are logged to `security_events`. Tested payload:
 
@@ -463,7 +463,7 @@ POST /lob/order
 → HTTP 403 Forbidden
 ```
 
-The `sqlglot` AST parser detects the `Drop` node in the parsed SQL fragment. The event is logged with timestamp, client IP, raw payload, and endpoint — forming a durable audit trail in the TimescaleDB-backed `security_events` hypertable.
+The `sqlglot` AST parser detects the `Drop` node in the parsed SQL fragment. The event is logged with timestamp, client IP, raw payload, and endpoint - forming a durable audit trail in the TimescaleDB-backed `security_events` hypertable.
 
 **DDoS resistance benchmark:** Siege load test against the security proxy (port 8000):
 
@@ -480,39 +480,39 @@ The higher latency compared to direct LOB access (1,194ms vs 62ms) reflects the 
 
 **Rate limiter:** Verified via automated test: client exceeding 1,000 requests/second receives HTTP 429. Redis `INCR`+`EXPIRE` sliding window ensures accurate per-IP counting without race conditions.
 
-### 4.6 Grafana Dashboard — Live System Overview
+### 4.6 Grafana Dashboard - Live System Overview
 
 The 49-panel Grafana dashboard at `http://localhost:3000` provides a unified view across all five modules. Panels are provisioned via JSON (version-controlled in `module5_security/grafana_provisioning/`) and load automatically on container startup.
 
-![Grafana Hero Row — System Overview](grafana_hero.png)
+![Grafana Hero Row - System Overview](grafana_hero.png)
 
 *Figure 3: Hero row showing live LOB throughput, 38x TimescaleDB speedup, arbitrage signal count, 5848x Grover overhead, SQL injections blocked, and 6 services online.*
 
 **Hero row (6 stat tiles, auto-refresh 5s):**
-- LOB Throughput — live `rate(lob_orders_total[1m])` from Prometheus
-- TimescaleDB Speedup — `38×` from `benchmark_quantum_results` table
-- Arb Signals (24h) — count of CLASSICAL signals from `arbitrage_signals`
-- Grover Overhead @N=32 — `5,848×` from `benchmark_quantum_results` table
-- SQL Injections Blocked — count from `security_events`
-- Services Up — Prometheus `up` metric across all 5 modules
+- LOB Throughput - live `rate(lob_orders_total[1m])` from Prometheus
+- TimescaleDB Speedup - `38×` from `benchmark_quantum_results` table
+- Arb Signals (24h) - count of CLASSICAL signals from `arbitrage_signals`
+- Grover Overhead @N=32 - `5,848×` from `benchmark_quantum_results` table
+- SQL Injections Blocked - count from `security_events`
+- Services Up - Prometheus `up` metric across all 5 modules
 
-**Price Analysis row:** Candlestick chart (TimescaleDB OHLCV), SMA-20 overlay, volume histogram, RSI-14 indicator — all live from `ohlcv_1m` continuous aggregate.
+**Price Analysis row:** Candlestick chart (TimescaleDB OHLCV), SMA-20 overlay, volume histogram, RSI-14 indicator - all live from `ohlcv_1m` continuous aggregate.
 
 **Graph Arbitrage Engine row:** Bellman-Ford signal timeline (Grafana time series, 500ms cadence), profit distribution histogram, CLASSICAL vs QUANTUM comparison table.
 
-![Grafana Arbitrage Engine Row — Live Bellman-Ford Signals](grafana_arbitrage.png)
+![Grafana Arbitrage Engine Row - Live Bellman-Ford Signals](grafana_arbitrage.png)
 
 *Figure 4: Live arbitrage signal timeline. Each point is a Bellman-Ford run detecting a profitable negative cycle. Profit values 0.001--0.02% are consistent with real-world HFT margins.*
 
 **Quantum Engine row:** Full N=4→32 benchmark table with colour overrides (green = BF, purple = Grover, orange = ratio), circuit depth stat panel, qubit count panel, AerSimulator overhead text annotation.
 
-![Grafana Quantum Engine Row — BF vs Grover Benchmark Table](grafana_quantum.png)
+![Grafana Quantum Engine Row - BF vs Grover Benchmark Table](grafana_quantum.png)
 
 *Figure 5: Quantum benchmark table. Green columns = Bellman-Ford (ms), purple = Grover on AerSimulator (ms), orange = overhead ratio. At N=32 the ratio is 5,848x.*
 
 **Security & Observability row:** SQL injection blocked counter, rate-limit counter, requests/second time series, p99 latency time series, recent security events log table.
 
-![Grafana Security Row — SQL Injection Blocked and Observability](grafana_security.png)
+![Grafana Security Row - SQL Injection Blocked and Observability](grafana_security.png)
 
 *Figure 6: Security & Observability row. SQL Injections Blocked counter increments on each detected attack. The security events table shows timestamp, client IP, and blocked status.*
 
@@ -534,25 +534,25 @@ The benchmark results confirm that the polyglot strategy is justified:
 
 The quantum benchmark is intentionally not a fair comparison between Bellman-Ford and Grover's Algorithm. It is a benchmark of Bellman-Ford versus *simulated* Grover, which is a meaningfully different measurement.
 
-The benchmark answers the question: *given current near-term quantum tooling (Qiskit + AerSimulator), what is the practical overhead of running a Grover circuit that would theoretically solve the arbitrage detection problem?* The answer is that the simulation overhead is 5,848× at N=32, and grows exponentially with N. This is the correct result for a NISQ-era (Noisy Intermediate-Scale Quantum) assessment — it honestly characterises what quantum computers offer today versus what they promise theoretically.
+The benchmark answers the question: *given current near-term quantum tooling (Qiskit + AerSimulator), what is the practical overhead of running a Grover circuit that would theoretically solve the arbitrage detection problem?* The answer is that the simulation overhead is 5,848× at N=32, and grows exponentially with N. This is the correct result for a NISQ-era (Noisy Intermediate-Scale Quantum) assessment - it honestly characterises what quantum computers offer today versus what they promise theoretically.
 
-The benchmark chart is the primary research deliverable of Module 4. The two curves diverge exponentially: Bellman-Ford grows as O(V·E) while simulated Grover grows as O(2ⁿ). The crossing point — where real quantum hardware would make Grover competitive — requires gate fidelities and qubit counts not available in 2026.
+The benchmark chart is the primary research deliverable of Module 4. The two curves diverge exponentially: Bellman-Ford grows as O(V·E) while simulated Grover grows as O(2ⁿ). The crossing point - where real quantum hardware would make Grover competitive - requires gate fidelities and qubit counts not available in 2026.
 
 ### 5.3 Limitations and Future Work
 
 1. **LOB benchmark environment:** All benchmarks run inside Docker Desktop on macOS, which adds a Linux VM hypervisor layer. Native bare-metal throughput would be substantially higher. A production LOB engine would also use kernel bypass networking (DPDK or io_uring).
 
-2. **Quantum hardware:** Grover's Algorithm has not been run on real quantum hardware — only AerSimulator. Running on IBM Quantum or IonQ would require error mitigation and circuit transpilation overhead that would further inflate the "quantum" latency.
+2. **Quantum hardware:** Grover's Algorithm has not been run on real quantum hardware - only AerSimulator. Running on IBM Quantum or IonQ would require error mitigation and circuit transpilation overhead that would further inflate the "quantum" latency.
 
 3. **Arbitrage executability:** Detected arbitrage signals represent theoretical opportunities given the rates in the graph. Actual execution would incur transaction fees (typically 0.1%–0.2% per leg), making most detected 0.001%–0.02% opportunities unprofitable to execute. The system is designed as a detection and research platform, not an automated trading system.
 
-4. **Graph scale:** The FX graph uses 20 nodes. Real FX arbitrage networks have hundreds of instruments and thousands of edges. Bellman-Ford at O(V·E) = O(hundreds × thousands) would still complete in milliseconds; Grover at O(√P(N,3)) would require hundreds of qubits and billions of circuit depth — firmly beyond current hardware.
+4. **Graph scale:** The FX graph uses 20 nodes. Real FX arbitrage networks have hundreds of instruments and thousands of edges. Bellman-Ford at O(V·E) = O(hundreds × thousands) would still complete in milliseconds; Grover at O(√P(N,3)) would require hundreds of qubits and billions of circuit depth - firmly beyond current hardware.
 
 ---
 
 ## 6. Conclusion
 
-HQT demonstrates that database technology selection should be driven by access pattern analysis, not convenience. Using five different database backends — C++ in-memory Red-Black Tree, TimescaleDB hypertable, Apache AGE property graph, shared PostgreSQL schema, and Redis — each module achieves performance characteristics that would be impossible with a single general-purpose database.
+HQT demonstrates that database technology selection should be driven by access pattern analysis, not convenience. Using five different database backends - C++ in-memory Red-Black Tree, TimescaleDB hypertable, Apache AGE property graph, shared PostgreSQL schema, and Redis - each module achieves performance characteristics that would be impossible with a single general-purpose database.
 
 The quantitative results validate each design decision:
 - **38× TimescaleDB speedup** demonstrates chunk exclusion's structural advantage for time-range queries
@@ -566,7 +566,7 @@ The most significant architectural lesson is the dual-insertion pattern for `arb
 
 ## 7. References
 
-1. TimescaleDB Documentation. *Hypertables and Chunks — Chunk Exclusion*. https://docs.timescale.com/
+1. TimescaleDB Documentation. *Hypertables and Chunks - Chunk Exclusion*. https://docs.timescale.com/
 2. Apache AGE Documentation. *Graph Data Modeling in PostgreSQL*. https://age.apache.org/
 3. Grover, L. K. (1996). *A fast quantum mechanical algorithm for database search*. Proceedings STOC 1996, pp. 212–219. ACM.
 4. Bellman, R. (1958). *On a routing problem*. Quarterly of Applied Mathematics, 16(1), 87–90.
@@ -576,15 +576,15 @@ The most significant architectural lesson is the dual-insertion pattern for `arb
 8. sqlglot. *SQL Parser, Transpiler, and Optimizer*. https://sqlglot.com/
 9. Drogon. *C++ Web Framework*. https://github.com/drogonframework/drogon
 10. Prometheus. *Metric Types and Exposition Format*. https://prometheus.io/docs/concepts/metric_types/
-11. PostgreSQL Global Development Group. *PostgreSQL 16 Documentation — Partitioning*. https://www.postgresql.org/docs/16/ddl-partitioning.html
+11. PostgreSQL Global Development Group. *PostgreSQL 16 Documentation - Partitioning*. https://www.postgresql.org/docs/16/ddl-partitioning.html
 12. Nielsen, M. A. & Chuang, I. L. (2010). *Quantum Computation and Quantum Information* (10th Anniversary Ed.). Cambridge University Press.
 13. Storn, A. & Lyuu, Y.-D. (2009). *High-frequency trading*. Journal of Trading, 4(1), 64–70.
-14. Kraken API Documentation. *WebSocket API v2 — L2 Order Book*. https://docs.kraken.com/websockets-v2/
+14. Kraken API Documentation. *WebSocket API v2 - L2 Order Book*. https://docs.kraken.com/websockets-v2/
 15. Alpha Vantage. *Currency Exchange Rate API*. https://www.alphavantage.co/documentation/
 
 ---
 
-## Appendix A — REST API Endpoints
+## Appendix A - REST API Endpoints
 
 | Service | Port | Endpoint | Method | Description |
 |---------|------|----------|--------|-------------|
@@ -599,7 +599,7 @@ The most significant architectural lesson is the dual-insertion pattern for `arb
 | Quantum Engine | 8004 | `/quantum/signals` | GET | Recent Grover signals |
 | Quantum Engine | 8004 | `/quantum/benchmark` | GET | Full benchmark table |
 
-## Appendix B — Infrastructure
+## Appendix B - Infrastructure
 
 | Service | Image | Port | Purpose |
 |---------|-------|------|---------|
